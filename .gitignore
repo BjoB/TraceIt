@@ -30,3 +30,6 @@
 *.exe
 *.out
 *.app
+/TraceIt/out/build/
+/TraceIt/.vs
+/.vs
