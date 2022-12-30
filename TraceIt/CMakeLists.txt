@@ -51,7 +51,11 @@ target_link_libraries(imgui PRIVATE glfw Vulkan::Vulkan)
 
 # Build --------------------------------------------------------------
 
-add_executable(studio "src/app.cpp" "src/app.h")
+add_executable(studio
+    "src/app.cpp"
+    "src/ui.cpp"
+    "src/ui.h"
+)
 
 target_link_libraries(studio
     PRIVATE
