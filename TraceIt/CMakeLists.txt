@@ -2,30 +2,9 @@
 
 # Dependencies -------------------------------------------------------
 
-## ImGui
-
-set(imgui_SRC_DIR "3rdparty/imgui-1.89.1")
-
-add_library(imgui)
-
-target_include_directories(imgui PUBLIC
-    ${imgui_SRC_DIR}/
-    ${imgui_SRC_DIR}/backends
-)
-
-target_sources(imgui PRIVATE
-    ${imgui_SRC_DIR}/imgui.h
-    ${imgui_SRC_DIR}/imgui_internal.h
-    ${imgui_SRC_DIR}/imgui.cpp
-    ${imgui_SRC_DIR}/imgui_demo.cpp
-    ${imgui_SRC_DIR}/imgui_draw.cpp
-    ${imgui_SRC_DIR}/imgui_tables.cpp
-    ${imgui_SRC_DIR}/imgui_widgets.cpp
-)
-
 ## glfw
 
-set(glfw_SRC_DIR "3rdparty/glfw-3.3.8")
+set(glfw_SRC_DIR "${CMAKE_CURRENT_LIST_DIR}/3rdparty/glfw-3.3.8")
 
 add_library(glfw SHARED IMPORTED)
 
@@ -42,6 +21,33 @@ find_package(Vulkan REQUIRED)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DVK_PROTOTYPES")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVK_PROTOTYPES")
+
+## ImGui
+
+set(imgui_SRC_DIR "${CMAKE_CURRENT_LIST_DIR}/3rdparty/imgui-1.89.1")
+
+add_library(imgui)
+
+target_include_directories(imgui PUBLIC
+    ${imgui_SRC_DIR}/
+    ${imgui_SRC_DIR}/backends
+)
+
+target_sources(imgui PRIVATE
+    ${imgui_SRC_DIR}/imgui.h
+    ${imgui_SRC_DIR}/imgui_internal.h
+    ${imgui_SRC_DIR}/imgui.cpp
+    ${imgui_SRC_DIR}/imgui_demo.cpp
+    ${imgui_SRC_DIR}/imgui_draw.cpp
+    ${imgui_SRC_DIR}/imgui_tables.cpp
+    ${imgui_SRC_DIR}/imgui_widgets.cpp
+    ${imgui_SRC_DIR}/backends/imgui_impl_glfw.h
+    ${imgui_SRC_DIR}/backends/imgui_impl_glfw.cpp
+    ${imgui_SRC_DIR}/backends/imgui_impl_vulkan.h
+    ${imgui_SRC_DIR}/backends/imgui_impl_vulkan.cpp
+)
+
+target_link_libraries(imgui PRIVATE glfw Vulkan::Vulkan)
 
 # Build --------------------------------------------------------------
 
