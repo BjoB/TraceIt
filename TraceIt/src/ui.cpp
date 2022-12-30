@@ -5,9 +5,9 @@
 #include <stdio.h>   // printf, fprintf
 #include <stdlib.h>  // abort
 
+#include "backends/imgui_impl_glfw.h"
+#include "backends/imgui_impl_vulkan.h"
 #include "imgui.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_vulkan.h"
 
 // [Win32] Our example includes a copy of glfw3.lib pre-compiled with VS2010 to maximize ease of testing and
 // compatibility with old VS compilers. To link with VS2010-era libraries, VS2015+ requires linking with
@@ -15,6 +15,15 @@
 // likely to link with a newer binary of GLFW that is adequate for your version of Visual Studio.
 #if defined(_MSC_VER) && (_MSC_VER >= 1900) && !defined(IMGUI_DISABLE_WIN32_FUNCTIONS)
 #pragma comment(lib, "legacy_stdio_definitions")
+#endif
+
+// Visual Studio warnings
+#ifdef _MSC_VER
+#pragma warning( \
+    disable : 4996)  // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
+#pragma warning(disable : 26451)  // [Static Analyzer] Arithmetic overflow : Using operator 'xxx' on a 4 byte value and
+                                  // then casting the result to an 8 byte value. Cast the value to the wider type before
+                                  // calling operator 'xxx' to avoid overflow(io.2).
 #endif
 
 // #define IMGUI_UNLIMITED_FRAME_RATE
@@ -343,7 +352,9 @@ static void glfw_error_callback(int error, const char* description) {
 
 namespace Ui {
 
-App::App(const Config& config) { init(config.name, config.window_width, config.window_height); }
+App::App(const Config& config) : m_time_last_frame(currentTimeMs()) {
+    init(config.name, config.window_width, config.window_height);
+}
 
 App::~App() {
     delete m_window;
@@ -390,7 +401,8 @@ void App::init(const char* name, int window_width, int window_height) {
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
-    // ImGui::StyleColorsLight();
+    // auto& style = ImGui::GetStyle();
+    // style.Colors[ImGuiCol_WindowBg] = ImVec4(0.05f, 0.05f, 0.1f, 1.00f);
 
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForVulkan(m_window, true);
@@ -470,7 +482,7 @@ void App::run() {
     ImGui_ImplVulkanH_Window* wd = &g_MainWindowData;
 
     // Main loop
-    while (!glfwWindowShouldClose(m_window)) {
+    while (!glfwWindowShouldClose(m_window) && m_running) {
         // Poll and handle events (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your
         // inputs.
@@ -480,6 +492,13 @@ void App::run() {
         // clear/overwrite your copy of the keyboard data. Generally you may always pass all inputs to dear imgui, and
         // hide them from your application based on those two flags.
         glfwPollEvents();
+        
+        // Update section
+        for (auto& layer : m_layers) {
+            layer->onUpdate();
+        }
+
+        updateFrameTime();
 
         // Resize swap chain?
         if (g_SwapChainRebuild) {
@@ -499,7 +518,31 @@ void App::run() {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        // INSERT UI CODE HERE!!!
+        // Setup custom ui
+        const ImGuiViewport* viewport = ImGui::GetMainViewport();
+        ImGui::SetNextWindowPos(viewport->WorkPos);
+        ImGui::SetNextWindowSize(viewport->WorkSize);
+
+        ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar;
+        window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
+                        ImGuiWindowFlags_NoMove;
+        window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+        ImGui::Begin("Test", nullptr, window_flags);
+        ImGui::PopStyleVar(3);
+
+        for (auto& layer : m_layers) {
+            layer->onRender();
+        }
+
+        ImGui::Begin("Info");
+        ImGui::Text("Last frametime: %.2f ms (%.2f fps)", m_frame_duration, 1e3 / m_frame_duration);
+        ImGui::End();
+
+        ImGui::End();
 
         // Rendering
         ImGui::Render();
@@ -516,6 +559,11 @@ void App::run() {
     }
 }
 
+void App::stop() { 
+    m_running = false;
+    m_layers.clear();
+}
+
 void App::cleanup() {
     VkResult err = vkDeviceWaitIdle(g_Device);
     check_vk_result(err);
@@ -528,6 +576,12 @@ void App::cleanup() {
 
     glfwDestroyWindow(m_window);
     glfwTerminate();
+}
+
+void App::updateFrameTime() {
+    const auto time_now = currentTimeMs();
+    m_frame_duration = time_now - m_time_last_frame;
+    m_time_last_frame = time_now;
 }
 
 }  // namespace Ui
