@@ -41,18 +41,50 @@ class SceneLayer : public Layer {
         if (ImGui::TreeNode("Scene Objects")) {
             for (const auto& obj : m_scene.objects()) {
                 if (ImGui::TreeNode(obj->name.c_str())) {
+                    drawObjectSettings(*obj);
                     ImGui::TreePop();
                 }
             }
             ImGui::TreePop();
         }
 
-        ImGui::Separator();
-
         ImGui::End();
     }
 
    private:
+    void drawObjectSettings(Object& obj) {
+        ImGui::Separator();
+        ImGui::Text("Object Settings");
+        if (obj.name.find("Plane") != std::string::npos) {
+            drawObjectSettings(dynamic_cast<Plane&>(obj));
+        } else if (obj.name.find("Cube") != std::string::npos) {
+            drawObjectSettings(dynamic_cast<Cube&>(obj));
+        } else if (obj.name.find("Sphere") != std::string::npos) {
+            drawObjectSettings(dynamic_cast<Sphere&>(obj));
+        }
+        ImGui::Separator();
+    }
+
+    void drawObjectSettings(Plane& obj) {
+        ImGui::Text("Position");
+        ImGui::SliderFloat("z", &obj.position.z, -50.f, 50.0f, "%.1f");
+    }
+
+    void drawObjectSettings(Cube& obj) {
+        ImGui::Text("Position");
+        ImGui::SliderFloat("x", &obj.position.x, -50.f, 50.0f, "%.1f");
+        ImGui::SliderFloat("y", &obj.position.y, -50.f, 50.0f, "%.1f");
+        ImGui::SliderFloat("z", &obj.position.z, -50.f, 50.0f, "%.1f");
+    }
+
+    void drawObjectSettings(Sphere& obj) {
+        ImGui::Text("Position");
+        ImGui::SliderFloat("x", &obj.position.x, -50.f, 50.0f, "%.1f");
+        ImGui::SliderFloat("y", &obj.position.y, -50.f, 50.0f, "%.1f");
+        ImGui::SliderFloat("z", &obj.position.z, -50.f, 50.0f, "%.1f");
+        ImGui::SliderFloat("r", &obj.radius, 0.f, 10.0f, "%.1f");
+    }
+
     std::vector<std::string> m_object_types;
     std::string m_cur_obj_selection;
     Scene m_scene;

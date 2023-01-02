@@ -59,9 +59,9 @@ class Scene {
         const auto next_id_str = std::to_string(next_id);
 
         if (object_type == "Plane")
-            addObject<Plane>(std::string("Plane ") + next_id_str);
+            addObject<Plane>(std::string("Plane") + next_id_str);
         else if (object_type == "Cube")
-            addObject<Cube>(std::string("Cube ") + next_id_str);
+            addObject<Cube>(std::string("Cube") + next_id_str);
         else if (object_type == "Sphere")
             addObject<Sphere>("Sphere" + next_id_str);
         else {
