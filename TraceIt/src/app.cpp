@@ -32,6 +32,23 @@ class SceneLayer : public Layer {
             ImGui::EndCombo();
         }
 
+        bool add_object_pressed = ImGui::Button("+");
+        if (add_object_pressed) {
+            m_scene.addObject(m_cur_obj_selection);
+        }
+
+        ImGui::Separator();
+        if (ImGui::TreeNode("Scene Objects")) {
+            for (const auto& obj : m_scene.objects()) {
+                if (ImGui::TreeNode(obj->name.c_str())) {
+                    ImGui::TreePop();
+                }
+            }
+            ImGui::TreePop();
+        }
+
+        ImGui::Separator();
+
         ImGui::End();
     }
 

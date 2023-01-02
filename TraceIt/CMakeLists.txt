@@ -53,6 +53,7 @@ target_link_libraries(imgui PRIVATE glfw Vulkan::Vulkan)
 
 add_executable(studio
     "src/app.cpp"
+    "src/log.h"
     "src/scene.h"
     "src/ui.cpp"
     "src/ui.h"
