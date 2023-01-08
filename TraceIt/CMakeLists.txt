@@ -15,6 +15,12 @@ set_target_properties(glfw PROPERTIES
     IMPORTED_IMPLIB "${glfw_SRC_DIR}/lib-vc2022/glfw3.lib"
 )
 
+## stb
+
+add_library(stb INTERFACE)
+
+target_include_directories(stb INTERFACE "${CMAKE_CURRENT_LIST_DIR}/3rdparty/stb")
+
 ## Vulkan
 
 find_package(Vulkan REQUIRED)
@@ -54,6 +60,9 @@ target_link_libraries(imgui PRIVATE glfw Vulkan::Vulkan)
 add_executable(studio
     "src/app.cpp"
     "src/log.h"
+    "src/image.cpp"
+    "src/image.h"
+    "src/renderer.h"
     "src/scene.h"
     "src/ui.cpp"
     "src/ui.h"

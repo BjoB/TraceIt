@@ -361,6 +361,48 @@ App::~App() {
     m_window = nullptr;
 }
 
+VkDevice App::getVkDevice() { return g_Device; }
+
+VkPhysicalDevice App::getVkPhysicalDevice() { return g_PhysicalDevice; }
+
+VkCommandBuffer App::getVkCommandBuffer() {
+    ImGui_ImplVulkanH_Window* main_wnd = &g_MainWindowData;
+
+    VkCommandPool command_pool = main_wnd->Frames[main_wnd->FrameIndex].CommandPool;
+    VkCommandBuffer command_buffer;
+    VkResult err;
+
+    VkCommandBufferAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    alloc_info.commandPool = command_pool;
+    alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    alloc_info.commandBufferCount = 1;
+
+    err = vkAllocateCommandBuffers(g_Device, &alloc_info, &command_buffer);
+
+    VkCommandBufferBeginInfo begin_info = {};
+    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    begin_info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    err = vkBeginCommandBuffer(command_buffer, &begin_info);
+    check_vk_result(err);
+
+    return command_buffer;
+}
+
+void App::endVkCommandBuffer(VkCommandBuffer& command_buffer) {
+    VkResult err;
+    VkSubmitInfo end_info = {};
+    end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    end_info.commandBufferCount = 1;
+    end_info.pCommandBuffers = &command_buffer;
+    err = vkEndCommandBuffer(command_buffer);
+    check_vk_result(err);
+    err = vkQueueSubmit(g_Queue, 1, &end_info, VK_NULL_HANDLE);
+    check_vk_result(err);
+    err = vkDeviceWaitIdle(g_Device);
+    check_vk_result(err);
+}
+
 void App::init(const char* name, int window_width, int window_height) {
     // Setup GLFW window
     glfwSetErrorCallback(glfw_error_callback);
@@ -492,7 +534,7 @@ void App::run() {
         // clear/overwrite your copy of the keyboard data. Generally you may always pass all inputs to dear imgui, and
         // hide them from your application based on those two flags.
         glfwPollEvents();
-        
+
         // Update section
         for (auto& layer : m_layers) {
             layer->onUpdate();
@@ -527,7 +569,7 @@ void App::run() {
         window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
                         ImGuiWindowFlags_NoMove;
         window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
-        //window_flags |= ImGuiWindowFlags_Popup;
+        // window_flags |= ImGuiWindowFlags_Popup;
 
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
@@ -560,7 +602,7 @@ void App::run() {
     }
 }
 
-void App::stop() { 
+void App::stop() {
     m_running = false;
     m_layers.clear();
 }
@@ -568,6 +610,7 @@ void App::stop() {
 void App::cleanup() {
     VkResult err = vkDeviceWaitIdle(g_Device);
     check_vk_result(err);
+
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
@@ -584,5 +627,18 @@ void App::updateFrameTime() {
     m_frame_duration = time_now - m_time_last_frame;
     m_time_last_frame = time_now;
 }
+
+uint32_t findMemoryType(uint32_t type_filter, VkMemoryPropertyFlags properties) {
+    VkPhysicalDeviceMemoryProperties mem_properties;
+    vkGetPhysicalDeviceMemoryProperties(App::getVkPhysicalDevice(), &mem_properties);
+
+    for (uint32_t i = 0; i < mem_properties.memoryTypeCount; i++)
+        if ((type_filter & (1 << i)) && (mem_properties.memoryTypes[i].propertyFlags & properties) == properties)
+            return i;
+
+    return 0xFFFFFFFF;  // Unable to find memoryType
+}
+
+void checkVkResult(VkResult err) { check_vk_result(err); }
 
 }  // namespace Ui

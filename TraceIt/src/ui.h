@@ -42,6 +42,11 @@ class App {
     }
 
     GLFWwindow* getWnd() const { return m_window; }
+    
+    static VkDevice getVkDevice();
+    static VkPhysicalDevice getVkPhysicalDevice();
+    static VkCommandBuffer getVkCommandBuffer();
+    static void endVkCommandBuffer(VkCommandBuffer& command_buffer);
 
    private:
     void init(const char* name, int window_width, int window_height);
@@ -55,5 +60,11 @@ class App {
     GLFWwindow* m_window = nullptr;
     std::vector<std::shared_ptr<Layer>> m_layers;
 };
+
+void checkVkResult(VkResult err);
+
+/// Helper function to find Vulkan memory type bits from
+/// https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples#Example-for-Vulkan-users
+uint32_t findMemoryType(uint32_t type_filter, VkMemoryPropertyFlags properties);
 
 }  // namespace Ui
