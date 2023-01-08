@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "imgui.h"
+#include "renderer.h"
 #include "scene.h"
 #include "ui.h"
 
@@ -49,9 +50,23 @@ class SceneLayer : public Layer {
         }
 
         ImGui::End();
+
+        // Image output
+        ImGui::Begin("Renderer");
+        if (ImGui::Button("Render")) {
+            render();
+        }
+        ImGui::End();
     }
 
    private:
+    void render() {
+        m_renderer.refresh(500, 500);
+        Image& image = *m_renderer.image();
+        ImGui::Image((ImTextureID)image.descrSet(),
+                     ImVec2(static_cast<float>(image.width()), static_cast<float>(image.height())));
+    }
+
     void drawObjectSettings(Object& obj) {
         ImGui::Separator();
         ImGui::Text("Object Settings");
@@ -88,6 +103,7 @@ class SceneLayer : public Layer {
     std::vector<std::string> m_object_types;
     std::string m_cur_obj_selection;
     Scene m_scene;
+    Renderer m_renderer;
 };
 
 int main(int, char**) {

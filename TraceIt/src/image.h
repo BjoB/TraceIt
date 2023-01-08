@@ -12,6 +12,10 @@ class Image {
     Image(uint32_t width, uint32_t height, const void* img_data);
     ~Image();
 
+    auto width() const { return m_width; }
+    auto height() const { return m_height; }
+    auto descrSet() const { return m_descr_set; }
+
    private:
     void initialize();
     void setData(const void* img_data);
@@ -24,13 +28,13 @@ class Image {
     uint32_t m_height;
     uint32_t m_channels;
 
-    VkDescriptorSet m_descr_set;
+    VkDescriptorSet m_descr_set = nullptr;
 
     // Need to keep track of these to properly cleanup
-    VkImageView m_image_view;
-    VkImage m_image;
-    VkDeviceMemory m_image_memory;
-    VkSampler m_sampler;
-    VkBuffer m_upload_buffer;
-    VkDeviceMemory m_upload_buffer_memory;
+    VkImageView m_image_view = nullptr;
+    VkImage m_image = nullptr;
+    VkDeviceMemory m_image_memory = nullptr;
+    VkSampler m_sampler = nullptr;
+    VkBuffer m_upload_buffer = nullptr;
+    VkDeviceMemory m_upload_buffer_memory = nullptr;
 };
