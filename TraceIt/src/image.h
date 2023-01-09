@@ -12,13 +12,14 @@ class Image {
     Image(uint32_t width, uint32_t height, const void* img_data);
     ~Image();
 
+    void setData(const void* img_data);
+
     auto width() const { return m_width; }
     auto height() const { return m_height; }
     auto descrSet() const { return m_descr_set; }
 
    private:
     void initialize();
-    void setData(const void* img_data);
     void cleanup();
 
     const VkFormat m_image_format = VK_FORMAT_R8G8B8A8_UNORM;

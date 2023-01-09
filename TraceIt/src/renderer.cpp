@@ -27,6 +27,7 @@ void Renderer::render(const Scene& scene) {
     for (uint32_t i = 0; i < sizeof(m_img_data); ++i) {
         m_img_data[i] = utils::colorToRGBA(glm::vec4(0.2f));
     }
+    m_image->setData(m_img_data);
     //for (auto& object : scene.objects()) {
     //}
 }
