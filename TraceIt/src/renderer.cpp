@@ -12,13 +12,15 @@ uint32_t utils::colorToRGBA(const glm::vec4& color) {
 }
 
 void Renderer::refresh(uint32_t width, uint32_t height) {
-    if (m_img_data) {
-        m_image->resize(width, height);
+    if (m_image) {
+        if (m_image->width() != width || m_image->height() != height) {
+            m_image->resize(width, height);
+        }
     } else {
-        delete[] m_img_data;
-        m_img_data = new uint32_t[width * height];
-        m_image = std::make_shared<Image>(width, height, m_img_data);
+        m_image = std::make_shared<Image>(width, height, nullptr);
     }
+    delete[] m_img_data;
+    m_img_data = new uint32_t[width * height];
 }
 
 void Renderer::render(const Scene& scene) {
@@ -26,6 +28,6 @@ void Renderer::render(const Scene& scene) {
         m_img_data[i] = utils::colorToRGBA(glm::vec4(0.2f));
     }
     m_image->setData(m_img_data);
-    //for (auto& object : scene.objects()) {
-    //}
+    // for (auto& object : scene.objects()) {
+    // }
 }
