@@ -53,18 +53,31 @@ class SceneLayer : public Layer {
 
         // Image output
         ImGui::Begin("Renderer");
+
         if (ImGui::Button("Render")) {
             render();
         }
+
+        const auto region_avail = ImGui::GetContentRegionAvail();
+        m_render_image_width = region_avail.x;
+        m_render_image_height = region_avail.y;
+
+        const auto image = m_renderer.image();
+        if (image) {
+            ImGui::Image((ImTextureID)image->descrSet(),
+                         ImVec2(static_cast<float>(image->width()), static_cast<float>(image->height())), ImVec2(0, 1),
+                         ImVec2(1, 0));
+        }
+
         ImGui::End();
+
+        //render();
     }
 
    private:
     void render() {
-        m_renderer.refresh(500, 500);
-        Image& image = *m_renderer.image();
-        ImGui::Image((ImTextureID)image.descrSet(),
-                     ImVec2(static_cast<float>(image.width()), static_cast<float>(image.height())));
+        m_renderer.refresh(m_render_image_width, m_render_image_height);
+        m_renderer.render(m_scene);
     }
 
     void drawObjectSettings(Object& obj) {
@@ -104,6 +117,8 @@ class SceneLayer : public Layer {
     std::string m_cur_obj_selection;
     Scene m_scene;
     Renderer m_renderer;
+    uint32_t m_render_image_width = 0;
+    uint32_t m_render_image_height = 0;
 };
 
 int main(int, char**) {
