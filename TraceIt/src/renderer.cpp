@@ -13,9 +13,7 @@ uint32_t utils::colorToRGBA(const glm::vec4& color) {
 
 void Renderer::refresh(uint32_t width, uint32_t height) {
     if (m_img_data) {
-        if (m_image->width() != width || m_image->height() != height) {
-            // TODO: resize Image
-        }
+        m_image->resize(width, height);
     } else {
         delete[] m_img_data;
         m_img_data = new uint32_t[width * height];
