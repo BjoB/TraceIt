@@ -45,6 +45,11 @@ static ImGui_ImplVulkanH_Window g_MainWindowData;
 static int g_MinImageCount = 2;
 static bool g_SwapChainRebuild = false;
 
+// Custom buffer resources
+static uint32_t g_CurrentFrameIndex = 0;
+static std::vector<std::vector<VkCommandBuffer>> g_CustomCommandBuffers;
+static std::vector<std::vector<std::function<void()>>> g_ResourceCleanupQueue;
+
 static void check_vk_result(VkResult err) {
     if (err == 0) return;
     fprintf(stderr, "[vulkan] Error: VkResult = %d\n", err);
@@ -273,6 +278,8 @@ static void FrameRender(ImGui_ImplVulkanH_Window* wd, ImDrawData* draw_data) {
     }
     check_vk_result(err);
 
+    g_CurrentFrameIndex = (g_CurrentFrameIndex + 1) % g_MainWindowData.ImageCount;
+
     ImGui_ImplVulkanH_Frame* fd = &wd->Frames[wd->FrameIndex];
     {
         err = vkWaitForFences(g_Device, 1, &fd->Fence, VK_TRUE,
@@ -281,6 +288,20 @@ static void FrameRender(ImGui_ImplVulkanH_Window* wd, ImDrawData* draw_data) {
 
         err = vkResetFences(g_Device, 1, &fd->Fence);
         check_vk_result(err);
+    }
+    {
+        // Cleanup resource queue and custom command buffers
+        for (auto& func : g_ResourceCleanupQueue[g_CurrentFrameIndex]) {
+            func();
+        }
+        g_ResourceCleanupQueue[g_CurrentFrameIndex].clear();
+
+        auto& customCommandBuffers = g_CustomCommandBuffers[wd->FrameIndex];
+        if (customCommandBuffers.size() > 0) {
+            vkFreeCommandBuffers(g_Device, fd->CommandPool, (uint32_t)customCommandBuffers.size(),
+                                 customCommandBuffers.data());
+            customCommandBuffers.clear();
+        }
     }
     {
         err = vkResetCommandPool(g_Device, fd->CommandPool, 0);
@@ -356,10 +377,7 @@ App::App(const Config& config) : m_time_last_frame(currentTimeMs()) {
     init(config.name, config.window_width, config.window_height);
 }
 
-App::~App() {
-    delete m_window;
-    m_window = nullptr;
-}
+App::~App() {}
 
 VkDevice App::getVkDevice() { return g_Device; }
 
@@ -369,7 +387,6 @@ VkCommandBuffer App::getVkCommandBuffer() {
     ImGui_ImplVulkanH_Window* main_wnd = &g_MainWindowData;
 
     VkCommandPool command_pool = main_wnd->Frames[main_wnd->FrameIndex].CommandPool;
-    VkCommandBuffer command_buffer;
     VkResult err;
 
     VkCommandBufferAllocateInfo alloc_info = {};
@@ -378,6 +395,7 @@ VkCommandBuffer App::getVkCommandBuffer() {
     alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     alloc_info.commandBufferCount = 1;
 
+    auto& command_buffer = g_CustomCommandBuffers[main_wnd->FrameIndex].emplace_back();
     err = vkAllocateCommandBuffers(g_Device, &alloc_info, &command_buffer);
 
     VkCommandBufferBeginInfo begin_info = {};
@@ -390,17 +408,33 @@ VkCommandBuffer App::getVkCommandBuffer() {
 }
 
 void App::endVkCommandBuffer(VkCommandBuffer& command_buffer) {
-    VkResult err;
     VkSubmitInfo end_info = {};
     end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     end_info.commandBufferCount = 1;
     end_info.pCommandBuffers = &command_buffer;
-    err = vkEndCommandBuffer(command_buffer);
+
+    auto err = vkEndCommandBuffer(command_buffer);
     check_vk_result(err);
-    err = vkQueueSubmit(g_Queue, 1, &end_info, VK_NULL_HANDLE);
+
+    VkFenceCreateInfo fenceCreateInfo = {};
+    fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceCreateInfo.flags = 0;
+    VkFence fence;
+
+    err = vkCreateFence(g_Device, &fenceCreateInfo, nullptr, &fence);
     check_vk_result(err);
-    err = vkDeviceWaitIdle(g_Device);
+
+    err = vkQueueSubmit(g_Queue, 1, &end_info, fence);
     check_vk_result(err);
+
+    err = vkWaitForFences(g_Device, 1, &fence, VK_TRUE, UINT64_MAX);
+    check_vk_result(err);
+
+    vkDestroyFence(g_Device, fence, nullptr);
+}
+
+void App::addToCleanupQueue(std::function<void()>&& func) {
+    g_ResourceCleanupQueue[g_CurrentFrameIndex].emplace_back(func);
 }
 
 void App::init(const char* name, int window_width, int window_height) {
@@ -432,6 +466,10 @@ void App::init(const char* name, int window_width, int window_height) {
     glfwGetFramebufferSize(m_window, &w, &h);
     ImGui_ImplVulkanH_Window* wd = &g_MainWindowData;
     SetupVulkanWindow(wd, surface, w, h);
+
+    // Custom commandbuffer handling
+    g_CustomCommandBuffers.resize(wd->ImageCount);
+    g_ResourceCleanupQueue.resize(wd->ImageCount);
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -552,6 +590,10 @@ void App::run() {
                                                        g_QueueFamily, g_Allocator, width, height, g_MinImageCount);
                 g_MainWindowData.FrameIndex = 0;
                 g_SwapChainRebuild = false;
+
+                // Update custom command buffers
+                g_CustomCommandBuffers.clear();
+                g_CustomCommandBuffers.resize(g_MainWindowData.ImageCount);
             }
         }
 
@@ -600,16 +642,25 @@ void App::run() {
             FramePresent(wd);
         }
     }
+
+    cleanup();
 }
 
-void App::stop() {
-    m_running = false;
-    m_layers.clear();
-}
+void App::stop() { m_running = false; }
 
 void App::cleanup() {
+    m_layers.clear();
+
     VkResult err = vkDeviceWaitIdle(g_Device);
     check_vk_result(err);
+
+    // Custom resource cleanup
+    for (auto& queue : g_ResourceCleanupQueue) {
+        for (auto& func : queue) {
+            func();
+        }
+    }
+    g_ResourceCleanupQueue.clear();
 
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplGlfw_Shutdown();

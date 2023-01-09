@@ -5,6 +5,7 @@
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan.h>
 
+#include <functional>
 #include <memory>
 #include <type_traits>
 #include <vector>
@@ -42,11 +43,12 @@ class App {
     }
 
     GLFWwindow* getWnd() const { return m_window; }
-    
+
     static VkDevice getVkDevice();
     static VkPhysicalDevice getVkPhysicalDevice();
     static VkCommandBuffer getVkCommandBuffer();
     static void endVkCommandBuffer(VkCommandBuffer& command_buffer);
+    static void addToCleanupQueue(std::function<void()>&& func);
 
    private:
     void init(const char* name, int window_width, int window_height);

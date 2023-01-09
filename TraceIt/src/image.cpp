@@ -127,11 +127,10 @@ void Image::setData(const void* img_data) {
         vkUnmapMemory(device, m_upload_buffer_memory);
     }
 
-    // Get Command Buffer
-    VkCommandBuffer command_buffer = Ui::App::getVkCommandBuffer();
-
     // Copy to Image
     {
+        VkCommandBuffer command_buffer = Ui::App::getVkCommandBuffer();
+
         VkImageMemoryBarrier copy_barrier[1] = {};
         copy_barrier[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
         copy_barrier[0].dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -169,10 +168,9 @@ void Image::setData(const void* img_data) {
         use_barrier[0].subresourceRange.layerCount = 1;
         vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
                              0, NULL, 0, NULL, 1, use_barrier);
-    }
 
-    // End command buffer
-    Ui::App::endVkCommandBuffer(command_buffer);
+        Ui::App::endVkCommandBuffer(command_buffer);
+    }
 }
 
 void Image::resize(uint32_t width, uint32_t height) {
@@ -186,13 +184,18 @@ void Image::resize(uint32_t width, uint32_t height) {
 
 void Image::cleanup() {
     const auto device = Ui::App::getVkDevice();
-    vkFreeMemory(device, m_upload_buffer_memory, nullptr);
-    vkDestroyBuffer(device, m_upload_buffer, nullptr);
-    vkDestroySampler(device, m_sampler, nullptr);
-    vkDestroyImageView(device, m_image_view, nullptr);
-    vkDestroyImage(device, m_image, nullptr);
-    vkFreeMemory(device, m_image_memory, nullptr);
-    ImGui_ImplVulkan_RemoveTexture(m_descr_set);
+
+    Ui::App::addToCleanupQueue([device = device, sampler = m_sampler, image_view = m_image_view, image = m_image,
+                                image_memory = m_image_memory, upload_buffer = m_upload_buffer,
+                                upload_buffer_memory = m_upload_buffer_memory]() {
+        vkDestroySampler(device, sampler, nullptr);
+        vkDestroyImageView(device, image_view, nullptr);
+        vkDestroyImage(device, image, nullptr);
+        vkFreeMemory(device, image_memory, nullptr);
+        vkDestroyBuffer(device, upload_buffer, nullptr);
+        vkFreeMemory(device, upload_buffer_memory, nullptr);
+    });
+    // ImGui_ImplVulkan_RemoveTexture(m_descr_set);
 
     m_image_view = nullptr;
     m_image = nullptr;
