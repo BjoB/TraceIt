@@ -8,8 +8,6 @@
 
 Image::Image(uint32_t width, uint32_t height, const void* img_data) : m_width(width), m_height(height) {
     initialize();
-    /*static_cast<uint64_t>(m_width) * static_cast<uint64_t>(m_height) *
-        static_cast<uint64_t>(m_bytes_per_pixel)*/
     if (img_data) {
         setData(img_data);
     }
@@ -175,6 +173,15 @@ void Image::setData(const void* img_data) {
 
     // End command buffer
     Ui::App::endVkCommandBuffer(command_buffer);
+}
+
+void Image::resize(uint32_t width, uint32_t height) {
+    if (m_width != width || m_height != height) {
+        m_width = width;
+        m_height = height;
+        cleanup();
+        initialize();
+    }
 }
 
 void Image::cleanup() {
