@@ -40,11 +40,15 @@ class SceneLayer : public Layer {
 
         ImGui::Separator();
         if (ImGui::TreeNode("Scene Objects")) {
-            for (const auto& obj : m_scene.objects()) {
-                if (ImGui::TreeNode(obj->name.c_str())) {
-                    drawObjectSettings(*obj);
-                    ImGui::TreePop();
-                }
+            for (const auto obj_variant : m_scene.objects()) {
+                std::visit(
+                    [this](auto&& obj) {
+                        if (ImGui::TreeNode(obj.name.c_str())) {
+                            drawObjectSettings(obj);
+                            ImGui::TreePop();
+                        }
+                    },
+                    *obj_variant);
             }
             ImGui::TreePop();
         }
@@ -71,7 +75,7 @@ class SceneLayer : public Layer {
 
         ImGui::End();
 
-        //render();
+        // render();
     }
 
    private:
@@ -80,32 +84,32 @@ class SceneLayer : public Layer {
         m_renderer.render(m_scene);
     }
 
-    void drawObjectSettings(Object& obj) {
-        ImGui::Separator();
-        ImGui::Text("Object Settings");
-        if (obj.name.find("Plane") != std::string::npos) {
-            drawObjectSettings(dynamic_cast<Plane&>(obj));
-        } else if (obj.name.find("Cube") != std::string::npos) {
-            drawObjectSettings(dynamic_cast<Cube&>(obj));
-        } else if (obj.name.find("Sphere") != std::string::npos) {
-            drawObjectSettings(dynamic_cast<Sphere&>(obj));
-        }
-        ImGui::Separator();
-    }
+    //void drawObjectSettings(Object& obj) const {
+    //    ImGui::Separator();
+    //    ImGui::Text("Object Settings");
+    //    if (obj.name.find("Plane") != std::string::npos) {
+    //        drawObjectSettings(dynamic_cast<Plane&>(obj));
+    //    } else if (obj.name.find("Cube") != std::string::npos) {
+    //        drawObjectSettings(dynamic_cast<Cube&>(obj));
+    //    } else if (obj.name.find("Sphere") != std::string::npos) {
+    //        drawObjectSettings(dynamic_cast<Sphere&>(obj));
+    //    }
+    //    ImGui::Separator();
+    //}
 
-    void drawObjectSettings(Plane& obj) {
+    void drawObjectSettings(Plane& obj) const {
         ImGui::Text("Position");
         ImGui::SliderFloat("z", &obj.position.z, -50.f, 50.0f, "%.1f");
     }
 
-    void drawObjectSettings(Cube& obj) {
+    void drawObjectSettings(Cube& obj) const {
         ImGui::Text("Position");
         ImGui::SliderFloat("x", &obj.position.x, -50.f, 50.0f, "%.1f");
         ImGui::SliderFloat("y", &obj.position.y, -50.f, 50.0f, "%.1f");
         ImGui::SliderFloat("z", &obj.position.z, -50.f, 50.0f, "%.1f");
     }
 
-    void drawObjectSettings(Sphere& obj) {
+    void drawObjectSettings(Sphere& obj) const {
         ImGui::Text("Position");
         ImGui::SliderFloat("x", &obj.position.x, -50.f, 50.0f, "%.1f");
         ImGui::SliderFloat("y", &obj.position.y, -50.f, 50.0f, "%.1f");

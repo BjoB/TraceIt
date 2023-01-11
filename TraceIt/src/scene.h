@@ -10,6 +10,7 @@
 #include <type_traits>
 #include <unordered_map>
 #include <vector>
+#include <variant>
 
 enum ObjectType {
     kPlane,
@@ -43,6 +44,8 @@ struct Sphere : Object {
     float radius;
 };
 
+using SceneObject = std::variant<Plane, Cube, Sphere>;
+
 class Scene {
    public:
     Scene() {}
@@ -50,8 +53,9 @@ class Scene {
     template <class ObjectT>
     void addObject(const std::string& obj_name = "New Object") {
         static_assert(std::is_base_of_v<Object, ObjectT>, "Scene objects need to derive from Object struct!");
-        m_objects.push_back(std::make_shared<ObjectT>());
-        m_objects.back()->name = obj_name;
+        m_objects.push_back(std::make_shared<SceneObject>(ObjectT{}));
+        auto& added_obj_variant = *m_objects.back();
+        std::visit([&](auto&& obj_variant) { obj_variant.name = obj_name; }, added_obj_variant);
     }
 
     bool addObject(const std::string& object_type) {
@@ -84,5 +88,5 @@ class Scene {
    private:
     const std::unordered_map<ObjectType, const char*> m_available_objects_map{
         {ObjectType::kPlane, "Plane"}, {ObjectType::kCube, "Cube"}, {ObjectType::kSphere, "Sphere"}};
-    std::vector<std::shared_ptr<Object>> m_objects;
+    std::vector<std::shared_ptr<SceneObject>> m_objects;
 };

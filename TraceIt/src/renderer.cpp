@@ -1,5 +1,7 @@
 #include "renderer.h"
 
+#include <variant>
+
 #include "image.h"
 
 uint32_t utils::colorToRGBA(const glm::vec4& color) {
@@ -10,6 +12,12 @@ uint32_t utils::colorToRGBA(const glm::vec4& color) {
     uint32_t rgba_val = (a << 24) | (b << 16) | (g << 8) | r;
     return rgba_val;
 }
+
+void ObjectRenderer::operator()(const Plane& plane) const {}
+
+void ObjectRenderer::operator()(const Cube& cube) const {}
+
+void ObjectRenderer::operator()(const Sphere& sphere) const {}
 
 void Renderer::refresh(uint32_t width, uint32_t height) {
     if (m_image) {
@@ -28,6 +36,7 @@ void Renderer::render(const Scene& scene) {
         m_img_data[i] = utils::colorToRGBA(glm::vec4(0.2f));
     }
     m_image->setData(m_img_data);
-    // for (auto& object : scene.objects()) {
-    // }
+    for (const auto& object : scene.objects()) {
+        std::visit(ObjectRenderer{}, *object);
+    }
 }
