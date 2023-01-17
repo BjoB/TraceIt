@@ -33,12 +33,20 @@ void Renderer::refresh(uint32_t width, uint32_t height) {
     m_img_data = new uint32_t[width * height];
 }
 
-void Renderer::render(const Scene& scene) {
-    for (uint32_t i = 0; i < sizeof(m_img_data); ++i) {
-        m_img_data[i] = utils::colorToRGBA(glm::vec4(0.2f));
-    }
-    m_image->setData(m_img_data);
+vec4 Renderer::getPixelColor(const Scene& scene, uint32_t x, uint32_t y) {
+    // TODO: add logic
     for (const auto& object : scene.objects()) {
         std::visit(ObjectRenderer{}, *object);
     }
+    return vec4(0.2);
+}
+
+void Renderer::render(const Scene& scene) {
+    for (uint32_t y = 0; y < m_image->height(); ++y) {
+        for (uint32_t x = 0; x < m_image->width(); ++x) {
+            const auto color = getPixelColor(scene, x, y);
+            m_img_data[x + y * m_image->width()] = utils::colorToRGBA(color);
+        }
+    }
+    m_image->setData(m_img_data);
 }

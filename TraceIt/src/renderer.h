@@ -45,6 +45,7 @@ class Renderer {
     std::shared_ptr<Image> image() const { return m_image; }
 
    private:
+    vec4 getPixelColor(const Scene& scene, uint32_t x, uint32_t y);
     void render(const SceneObject& object);
     void render(const Plane& plane);
     void render(const Cube& cube);
