@@ -114,7 +114,7 @@ void Image::setData(const void* img_data) {
 
     // Upload to Buffer
     {
-        void* map = NULL;
+        void* map = nullptr;
         err = vkMapMemory(device, m_upload_buffer_memory, 0, image_size, 0, &map);
         Ui::checkVkResult(err);
         memcpy(map, img_data, image_size);
