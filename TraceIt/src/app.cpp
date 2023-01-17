@@ -1,8 +1,10 @@
 // TraceIt Main Application
 
+#include <glm/glm.hpp>
 #include <string>
 #include <vector>
 
+#include "camera.h"
 #include "imgui.h"
 #include "renderer.h"
 #include "scene.h"
@@ -12,12 +14,12 @@ using namespace Ui;
 
 class SceneLayer : public Layer {
    public:
-    SceneLayer() {
+    SceneLayer() : m_camera(glm::vec3(0.f, 0.f, 5.f), glm::vec3(0.f, 0.f, -1.f)), m_renderer(m_camera) {
         m_object_types = m_scene.availableObjectTypes();
         m_cur_obj_selection = m_object_types[0];
     }
 
-    virtual void onUpdate() override {}
+    virtual void onUpdate() override { m_camera.updatePose(); }
 
     virtual void onRender() override {
         ImGui::Begin("Scene Explorer");
@@ -74,28 +76,15 @@ class SceneLayer : public Layer {
         }
 
         ImGui::End();
-
-        // render();
     }
 
    private:
     void render() {
+        m_camera.refresh(m_render_image_width, m_render_image_height);
         m_renderer.refresh(m_render_image_width, m_render_image_height);
         m_renderer.render(m_scene);
     }
 
-    //void drawObjectSettings(Object& obj) const {
-    //    ImGui::Separator();
-    //    ImGui::Text("Object Settings");
-    //    if (obj.name.find("Plane") != std::string::npos) {
-    //        drawObjectSettings(dynamic_cast<Plane&>(obj));
-    //    } else if (obj.name.find("Cube") != std::string::npos) {
-    //        drawObjectSettings(dynamic_cast<Cube&>(obj));
-    //    } else if (obj.name.find("Sphere") != std::string::npos) {
-    //        drawObjectSettings(dynamic_cast<Sphere&>(obj));
-    //    }
-    //    ImGui::Separator();
-    //}
 
     void drawObjectSettings(Plane& obj) const {
         ImGui::Text("Position");
@@ -117,10 +106,12 @@ class SceneLayer : public Layer {
         ImGui::SliderFloat("r", &obj.radius, 0.f, 10.0f, "%.1f");
     }
 
+   private:
     std::vector<std::string> m_object_types;
     std::string m_cur_obj_selection;
     Scene m_scene;
     Renderer m_renderer;
+    Camera m_camera;
     uint32_t m_render_image_width = 0;
     uint32_t m_render_image_height = 0;
 };

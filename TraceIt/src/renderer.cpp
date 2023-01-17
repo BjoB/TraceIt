@@ -13,6 +13,8 @@ uint32_t utils::colorToRGBA(const glm::vec4& color) {
     return rgba_val;
 }
 
+Renderer::Renderer(const Camera& camera) : m_camera(camera) {}
+
 void ObjectRenderer::operator()(const Plane& plane) const {}
 
 void ObjectRenderer::operator()(const Cube& cube) const {}
@@ -25,7 +27,7 @@ void Renderer::refresh(uint32_t width, uint32_t height) {
             m_image->resize(width, height);
         }
     } else {
-        m_image = std::make_shared<Image>(width, height, nullptr);
+        m_image = std::make_shared<Image>(width, height);
     }
     delete[] m_img_data;
     m_img_data = new uint32_t[width * height];
