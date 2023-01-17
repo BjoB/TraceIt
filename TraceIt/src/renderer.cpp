@@ -33,12 +33,12 @@ void Renderer::refresh(uint32_t width, uint32_t height) {
     m_img_data = new uint32_t[width * height];
 }
 
-vec4 Renderer::getPixelColor(const Scene& scene, uint32_t x, uint32_t y) {
+glm::vec4 Renderer::getPixelColor(const Scene& scene, uint32_t x, uint32_t y) {
     // TODO: add logic
     for (const auto& object : scene.objects()) {
         std::visit(ObjectRenderer{}, *object);
     }
-    return vec4(0.2);
+    return glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
 }
 
 void Renderer::render(const Scene& scene) {
