@@ -9,7 +9,7 @@
 
 class Image {
    public:
-    Image(uint32_t width, uint32_t height, const void* img_data);
+    Image(uint32_t width, uint32_t height, const void* img_data = nullptr);
     ~Image();
 
     void setData(const void* img_data);
