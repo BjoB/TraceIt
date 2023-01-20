@@ -1,5 +1,6 @@
 // TraceIt Main Application
 
+#include <chrono>
 #include <glm/glm.hpp>
 #include <string>
 #include <vector>
@@ -46,7 +47,7 @@ class SceneLayer : public Layer {
                 std::visit(
                     [this](auto&& obj) {
                         if (ImGui::TreeNode(obj.name.c_str())) {
-                            drawObjectSettings(obj);
+                            drawAndUpdateObjectSettings(obj);
                             ImGui::TreePop();
                         }
                     },
@@ -59,6 +60,9 @@ class SceneLayer : public Layer {
 
         // Image output
         ImGui::Begin("Renderer");
+
+        const auto frame_ms = static_cast<float>(m_frame_time_ms.count());
+        ImGui::Text("Last frametime: %.2f ms (%.2f fps)", frame_ms, 1e3 / frame_ms);
 
         if (ImGui::Button("Render")) {
             render();
@@ -80,33 +84,39 @@ class SceneLayer : public Layer {
 
    private:
     void render() {
+        const auto start_time = std::chrono::high_resolution_clock::now();
         m_camera.refresh(m_render_image_width, m_render_image_height);
         m_renderer.refresh(m_render_image_width, m_render_image_height);
         m_renderer.render(m_scene);
+        const auto stop_time = std::chrono::high_resolution_clock::now();
+        m_frame_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(stop_time - start_time);
     }
 
-
-    void drawObjectSettings(Plane& obj) const {
+    void drawAndUpdateObjectSettings(Plane& obj) const {
         ImGui::Text("Position");
         ImGui::SliderFloat("z", &obj.position.z, -50.f, 50.0f, "%.1f");
     }
 
-    void drawObjectSettings(Cube& obj) const {
+    void drawAndUpdateObjectSettings(Cube& obj) const {
         ImGui::Text("Position");
         ImGui::SliderFloat("x", &obj.position.x, -50.f, 50.0f, "%.1f");
         ImGui::SliderFloat("y", &obj.position.y, -50.f, 50.0f, "%.1f");
         ImGui::SliderFloat("z", &obj.position.z, -50.f, 50.0f, "%.1f");
     }
 
-    void drawObjectSettings(Sphere& obj) const {
+    void drawAndUpdateObjectSettings(Sphere& obj) const {
         ImGui::Text("Position");
         ImGui::SliderFloat("x", &obj.position.x, -50.f, 50.0f, "%.1f");
         ImGui::SliderFloat("y", &obj.position.y, -50.f, 50.0f, "%.1f");
         ImGui::SliderFloat("z", &obj.position.z, -50.f, 50.0f, "%.1f");
         ImGui::SliderFloat("r", &obj.radius, 0.f, 10.0f, "%.1f");
+        float color[4] = {obj.color[0], obj.color[1], obj.color[2], 1.f};
+        ImGui::ColorEdit3("color", color);
+        obj.color = vec4(color[0], color[1], color[2], 1.f);
     }
 
    private:
+    std::chrono::milliseconds m_frame_time_ms{0};
     std::vector<std::string> m_object_types;
     std::string m_cur_obj_selection;
     Scene m_scene;
