@@ -623,10 +623,6 @@ void App::run() {
             layer->onRender();
         }
 
-        ImGui::Begin("Info");
-        ImGui::Text("Last frametime: %.2f ms (%.2f fps)", m_frame_duration, 1e3 / m_frame_duration);
-        ImGui::End();
-
         ImGui::End();
 
         // Rendering
