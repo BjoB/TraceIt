@@ -4,7 +4,7 @@
 
 #include "image.h"
 
-uint32_t utils::colorToRGBA(const glm::vec4& color) {
+uint32_t utils::colorToRGBA(const color& color) {
     uint8_t r = (uint8_t)(color.r * 255.f);
     uint8_t g = (uint8_t)(color.g * 255.f);
     uint8_t b = (uint8_t)(color.b * 255.f);
@@ -13,13 +13,29 @@ uint32_t utils::colorToRGBA(const glm::vec4& color) {
     return rgba_val;
 }
 
-Renderer::Renderer(const Camera& camera) : m_camera(camera) {}
+color ObjectRenderer::operator()(const Plane& plane) const {
+    // return plane.color;
+    return m_background_color;
+}
 
-void ObjectRenderer::operator()(const Plane& plane) const {}
+color ObjectRenderer::operator()(const Cube& cube) const {
+    // return cube.color;
+    return m_background_color;
+}
 
-void ObjectRenderer::operator()(const Cube& cube) const {}
+color ObjectRenderer::operator()(const Sphere& sphere) const {
+    const vec3 sphere_center_to_ray_orig = m_ray.orig - sphere.position;
+    const auto a = dot(m_ray.dir, m_ray.dir);
+    const auto b = 2.f * dot(sphere_center_to_ray_orig, m_ray.dir);
+    const auto c = dot(sphere_center_to_ray_orig, sphere_center_to_ray_orig) - sphere.radius * sphere.radius;
+    const auto discriminant = b * b - 4 * a * c;
+    if (discriminant > 0) {  // two roots = hit
+        return sphere.color;
+    }
+    return m_background_color;
+}
 
-void ObjectRenderer::operator()(const Sphere& sphere) const {}
+Renderer::Renderer(const Camera& camera) : m_camera(camera), m_background_color(0.1f, 0.1f, 0.1f, 1.f) {}
 
 void Renderer::refresh(uint32_t width, uint32_t height) {
     if (m_image) {
@@ -33,12 +49,12 @@ void Renderer::refresh(uint32_t width, uint32_t height) {
     m_img_data = new uint32_t[width * height];
 }
 
-glm::vec4 Renderer::getPixelColor(const Scene& scene, uint32_t x, uint32_t y) {
-    // TODO: add logic
+color Renderer::getPixelColor(const Scene& scene, uint32_t x, uint32_t y) {
+    Ray ray(m_camera.position(), m_camera.rayDirection(x, y));
     for (const auto& object : scene.objects()) {
-        std::visit(ObjectRenderer{}, *object);
+        return std::visit(ObjectRenderer(ray), *object);  // TODO: objects need to be sorted, return for first in depth
     }
-    return glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
+    return m_background_color;
 }
 
 void Renderer::render(const Scene& scene) {

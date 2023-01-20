@@ -20,6 +20,8 @@ class Camera {
 
     vec3 direction() const { return m_direction; }
 
+    vec3 rayDirection(uint32_t x, uint32_t y) const { return m_ray_directions[x + y * m_viewport_width]; }
+
    private:
     void updateProjectionMatrix();
 

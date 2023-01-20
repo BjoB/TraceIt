@@ -7,10 +7,11 @@
 #include "camera.h"
 
 using namespace glm;
+using color = vec4;
 
 namespace utils {
 
-uint32_t colorToRGBA(const glm::vec4& color);
+uint32_t colorToRGBA(const color& color);
 
 }
 
@@ -28,9 +29,14 @@ class Ray {
 };
 
 struct ObjectRenderer {
-    void operator()(const Plane& plane) const;
-    void operator()(const Cube& cube) const;
-    void operator()(const Sphere& sphere) const;
+    ObjectRenderer(const Ray& ray) : m_ray(ray), m_background_color(0.5f, 0.6f, 1.f, 1.f) {}
+
+    color operator()(const Plane& plane) const;
+    color operator()(const Cube& cube) const;
+    color operator()(const Sphere& sphere) const;
+
+    Ray m_ray;
+    color m_background_color;
 };
 
 class Renderer {
@@ -45,7 +51,7 @@ class Renderer {
     std::shared_ptr<Image> image() const { return m_image; }
 
    private:
-    vec4 getPixelColor(const Scene& scene, uint32_t x, uint32_t y);
+    color getPixelColor(const Scene& scene, uint32_t x, uint32_t y);
     void render(const SceneObject& object);
     void render(const Plane& plane);
     void render(const Cube& cube);
@@ -54,4 +60,5 @@ class Renderer {
     uint32_t* m_img_data = nullptr;
     std::shared_ptr<Image> m_image;
     const Camera& m_camera;
+    color m_background_color;
 };
