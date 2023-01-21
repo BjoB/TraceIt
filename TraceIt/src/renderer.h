@@ -6,8 +6,7 @@
 #include "image.h"
 #include "scene.h"
 
-using namespace glm;
-using color = vec4;
+using color = glm::vec4;
 
 namespace utils {
 

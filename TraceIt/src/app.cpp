@@ -92,6 +92,17 @@ class SceneLayer : public Layer {
         m_frame_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(stop_time - start_time);
     }
 
+    void drawAndUpdateObjectSettings(PointLight& obj) const {
+        ImGui::Text("Position");
+        ImGui::SliderFloat("x", &obj.position.x, -100.f, 100.0f, "%1.f");
+        ImGui::SliderFloat("y", &obj.position.y, -100.f, 100.0f, "%1.f");
+        ImGui::SliderFloat("z", &obj.position.z, -100.f, 100.0f, "%1.f");
+        float color[4] = {obj.color[0], obj.color[1], obj.color[2], 1.f};
+        ImGui::ColorEdit3("color", color);
+        obj.color = glm::vec4(color[0], color[1], color[2], 1.f);
+        ImGui::SliderFloat("intensity", &obj.intensity, 0.f, 1.0f, "%.01f");
+    }
+
     void drawAndUpdateObjectSettings(Plane& obj) const {
         ImGui::Text("Position");
         ImGui::SliderFloat("z", &obj.position.z, -50.f, 50.0f, "%.1f");
@@ -112,7 +123,7 @@ class SceneLayer : public Layer {
         ImGui::SliderFloat("r", &obj.radius, 0.f, 10.0f, "%.1f");
         float color[4] = {obj.color[0], obj.color[1], obj.color[2], 1.f};
         ImGui::ColorEdit3("color", color);
-        obj.color = vec4(color[0], color[1], color[2], 1.f);
+        obj.color = glm::vec4(color[0], color[1], color[2], 1.f);
     }
 
    private:

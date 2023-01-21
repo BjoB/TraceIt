@@ -11,30 +11,53 @@
 
 #include "log.h"
 
-using namespace glm;
-using color = vec4;
+using color = glm::vec4;
 
 class Ray {
    public:
-    using Scalar = vec3::value_type;
+    using Scalar = glm::vec3::value_type;
 
-    Ray(const vec3& origin, const vec3& direction) : orig(origin), dir(direction) {}
+    Ray(const glm::vec3& origin, const glm::vec3& direction) : orig(origin), dir(direction) {}
 
-    vec3 at(Scalar t) const { return orig + t * dir; }
+    glm::vec3 at(Scalar t) const { return orig + t * dir; }
 
    public:
-    vec3 orig;
-    vec3 dir;
+    glm::vec3 orig;
+    glm::vec3 dir;
 };
 
 struct RayHitRecord {
-    vec3 position;
-    vec3 normal;
+    void setFaceNormal(const Ray& ray, const glm::vec3& outward_normal) {
+        front_face = dot(ray.dir, outward_normal) < 0;
+        normal = front_face ? outward_normal : -outward_normal;
+    }
+
+    glm::vec3 position;
+    glm::vec3 normal;
     color color;
     float t;
+    bool front_face;
 };
 
+// class LightSource {
+//    public:
+//     LightSource(vec3 position, color color, float intensity)
+//         : m_position(position), m_color(color), m_intensity(intensity) {}
+//     virtual ~LightSource() = default;
+//
+//    private:
+//     vec3 m_position;
+//     color m_color;
+//     float m_intensity;
+// };
+//
+// class PointLightSource : public LightSource {
+//    public:
+//     PointLightSource(vec3 position, color color, float intensity) : LightSource(position, color, intensity) {}
+// };
+
 enum ObjectType {
+    kPointlight,
     kPlane,
     kCube,
     kSphere,
@@ -49,9 +72,15 @@ struct Object {
     virtual bool hit(const Ray& ray, float t_min, float t_max, RayHitRecord& rec) const = 0;
 
     std::string name;
-    vec3 position;
+    glm::vec3 position;
     color color;
-    MaterialType material;
+    MaterialType material = MaterialType::Lambertian;  // TODO: use pointer to material class?
+};
+
+struct PointLight : Object {
+    bool hit(const Ray& ray, float t_min, float t_max, RayHitRecord& rec) const override { return false; }
+
+    float intensity;
 };
 
 struct Plane : Object {
@@ -67,7 +96,7 @@ struct Cube : Object {
 
 struct Sphere : Object {
     bool hit(const Ray& ray, float t_min, float t_max, RayHitRecord& rec) const override {
-        const vec3 sphere_center_to_ray_orig = ray.orig - position;
+        const glm::vec3 sphere_center_to_ray_orig = ray.orig - position;
         const auto a = dot(ray.dir, ray.dir);
         const auto half_b = dot(sphere_center_to_ray_orig, ray.dir);
         const auto c = dot(sphere_center_to_ray_orig, sphere_center_to_ray_orig) - radius * radius;
@@ -90,7 +119,8 @@ struct Sphere : Object {
 
         rec.t = t;
         rec.position = ray.at(t);
-        rec.normal = (rec.position - position) / radius;  // as unit vector
+        glm::vec3 outward_normal = (rec.position - position) / radius;
+        rec.setFaceNormal(ray, outward_normal);
         rec.color = color;
         return true;
     }
@@ -98,7 +128,7 @@ struct Sphere : Object {
     float radius;
 };
 
-using SceneObject = std::variant<Plane, Cube, Sphere>;
+using SceneObject = std::variant<PointLight, Plane, Cube, Sphere>;
 
 class Scene {
    public:
@@ -116,7 +146,9 @@ class Scene {
         const auto next_id = static_cast<int>(m_objects.size()) + 1;
         const auto next_id_str = std::to_string(next_id);
 
-        if (object_type == "Plane")
+        if (object_type == "Pointlight")
+            addObject<PointLight>(std::string("Pointlight") + next_id_str);
+        else if (object_type == "Plane")
             addObject<Plane>(std::string("Plane") + next_id_str);
         else if (object_type == "Cube")
             addObject<Cube>(std::string("Cube") + next_id_str);
@@ -155,7 +187,9 @@ class Scene {
     }
 
    private:
-    const std::unordered_map<ObjectType, const char*> m_available_objects_map{
-        {ObjectType::kPlane, "Plane"}, {ObjectType::kCube, "Cube"}, {ObjectType::kSphere, "Sphere"}};
+    const std::unordered_map<ObjectType, const char*> m_available_objects_map{{ObjectType::kPointlight, "Pointlight"},
+                                                                              {ObjectType::kPlane, "Plane"},
+                                                                              {ObjectType::kCube, "Cube"},
+                                                                              {ObjectType::kSphere, "Sphere"}};
     std::vector<std::shared_ptr<SceneObject>> m_objects;
 };
