@@ -13,28 +13,6 @@ uint32_t utils::colorToRGBA(const color& color) {
     return rgba_val;
 }
 
-color ObjectRenderer::operator()(const Plane& plane) const {
-    // return plane.color;
-    return m_background_color;
-}
-
-color ObjectRenderer::operator()(const Cube& cube) const {
-    // return cube.color;
-    return m_background_color;
-}
-
-color ObjectRenderer::operator()(const Sphere& sphere) const {
-    const vec3 sphere_center_to_ray_orig = m_ray.orig - sphere.position;
-    const auto a = dot(m_ray.dir, m_ray.dir);
-    const auto b = 2.f * dot(sphere_center_to_ray_orig, m_ray.dir);
-    const auto c = dot(sphere_center_to_ray_orig, sphere_center_to_ray_orig) - sphere.radius * sphere.radius;
-    const auto discriminant = b * b - 4 * a * c;
-    if (discriminant > 0) {  // two roots = hit
-        return sphere.color;
-    }
-    return m_background_color;
-}
-
 Renderer::Renderer(const Camera& camera) : m_camera(camera), m_background_color(0.1f, 0.1f, 0.1f, 1.f) {}
 
 void Renderer::refresh(uint32_t width, uint32_t height) {
@@ -51,8 +29,9 @@ void Renderer::refresh(uint32_t width, uint32_t height) {
 
 color Renderer::getPixelColor(const Scene& scene, uint32_t x, uint32_t y) {
     Ray ray(m_camera.position(), m_camera.rayDirection(x, y));
-    for (const auto& object : scene.objects()) {
-        return std::visit(ObjectRenderer(ray), *object);  // TODO: objects need to be sorted, return for first in depth
+    RayHitRecord rec;
+    if (scene.hit(ray, 0.f, m_t_max, rec)) {
+        return rec.color;
     }
     return m_background_color;
 }

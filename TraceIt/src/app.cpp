@@ -15,7 +15,7 @@ using namespace Ui;
 
 class SceneLayer : public Layer {
    public:
-    SceneLayer() : m_camera(glm::vec3(0.f, 0.f, 5.f), glm::vec3(0.f, 0.f, -1.f)), m_renderer(m_camera) {
+    SceneLayer() : m_camera(glm::vec3(0.f, 0.f, -5.f), glm::vec3(0.f, 0.f, 1.f)), m_renderer(m_camera) {
         m_object_types = m_scene.availableObjectTypes();
         m_cur_obj_selection = m_object_types[0];
     }
@@ -43,7 +43,7 @@ class SceneLayer : public Layer {
 
         ImGui::Separator();
         if (ImGui::TreeNode("Scene Objects")) {
-            for (const auto obj_variant : m_scene.objects()) {
+            for (const auto& obj_variant : m_scene.objects()) {
                 std::visit(
                     [this](auto&& obj) {
                         if (ImGui::TreeNode(obj.name.c_str())) {
