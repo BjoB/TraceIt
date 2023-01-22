@@ -13,6 +13,8 @@
 
 using color = glm::vec4;
 
+constexpr float kPi = static_cast<float>(3.14159265358979323846);
+
 // Rays
 
 class Ray {
@@ -48,8 +50,8 @@ struct LightSource {
 
     std::string name;
     glm::vec3 position;
-    color color;
-    float intensity = 0.0f;
+    glm::vec3 color = glm::vec3(0.8f, 0.5f, 0.2f);  // orange
+    float intensity = 0.5f;
 };
 
 struct PointLight : LightSource {};
@@ -109,11 +111,26 @@ struct Sphere : Object {
             }
         }
 
+        // set general hitpoint properties
         rec.t = t;
         rec.position = ray.at(t);
-        glm::vec3 outward_normal = (rec.position - position) / radius;
+        const auto outward_normal = (rec.position - position) / this->radius;
         rec.setFaceNormal(ray, outward_normal);
-        rec.color = color;
+
+        const auto obj_color = glm::vec3(this->color);
+        // Calculate diffuse surface color:
+        // Li = light_intensity * light_color / 4*pi*r^2
+        // diffuse_color = albedo/pi * Li * cos(theta)
+        for (const auto& light : lights) {
+            const auto hitpoint_to_light = light->position - rec.position;
+            const auto hitpoint_to_light_dist_sq = glm::dot(hitpoint_to_light, hitpoint_to_light);
+            const auto dir_towards_light = glm::normalize(hitpoint_to_light);
+            const auto diffuse_color =
+                obj_color * light->intensity * light->color * std::max(0.f, glm::dot(rec.normal, dir_towards_light));
+            // TODO: put (4 * kPi * hitpoint_to_light_dist_sq)  somewhere?
+            rec.color = glm::vec4(diffuse_color, 1.f);
+        }
+
         return true;
     }
 

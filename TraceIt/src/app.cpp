@@ -115,7 +115,7 @@ class SceneLayer : public Layer {
         float color[4] = {obj.color[0], obj.color[1], obj.color[2], 1.f};
         ImGui::ColorEdit3("color", color);
         obj.color = glm::vec4(color[0], color[1], color[2], 1.f);
-        ImGui::SliderFloat("intensity", &obj.intensity, 0.f, 1.0f, "%.01f");
+        ImGui::SliderFloat("intensity", &obj.intensity, 0.f, 1.0f, "%.1f");
     }
 
     void drawAndUpdateObjectSettings(Plane& obj) const {
