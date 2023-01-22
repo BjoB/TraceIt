@@ -13,6 +13,8 @@
 
 using color = glm::vec4;
 
+// Rays
+
 class Ray {
    public:
     using Scalar = glm::vec3::value_type;
@@ -39,37 +41,29 @@ struct RayHitRecord {
     bool front_face;
 };
 
-// class LightSource {
-//    public:
-//     LightSource(vec3 position, color color, float intensity)
-//         : m_position(position), m_color(color), m_intensity(intensity) {}
-//     virtual ~LightSource() = default;
-//
-//    private:
-//     vec3 m_position;
-//     color m_color;
-//     float m_intensity;
-// };
-//
-// class PointLightSource : public LightSource {
-//    public:
-//     PointLightSource(vec3 position, color color, float intensity) : LightSource(position, color, intensity) {}
-// };
+// Lights
 
-enum ObjectType {
-    kPointlight,
-    kPlane,
-    kCube,
-    kSphere,
-    kLastObj,
+struct LightSource {
+    virtual ~LightSource() = default;
+
+    std::string name;
+    glm::vec3 position;
+    color color;
+    float intensity = 0.0f;
 };
+
+struct PointLight : LightSource {};
+
+using LightSources = std::vector<std::shared_ptr<LightSource>>;
+
+// Hittable objects
 
 enum MaterialType { Lambertian, Metal };
 
 struct Object {
     virtual ~Object() = default;
 
-    virtual bool hit(const Ray& ray, float t_min, float t_max, RayHitRecord& rec) const = 0;
+    virtual bool hit(const Ray& ray, const LightSources& lights, float t_min, float t_max, RayHitRecord& rec) const = 0;
 
     std::string name;
     glm::vec3 position;
@@ -77,25 +71,23 @@ struct Object {
     MaterialType material = MaterialType::Lambertian;  // TODO: use pointer to material class?
 };
 
-struct PointLight : Object {
-    bool hit(const Ray& ray, float t_min, float t_max, RayHitRecord& rec) const override { return false; }
-
-    float intensity;
-};
-
 struct Plane : Object {
-    bool hit(const Ray& ray, float t_min, float t_max, RayHitRecord& rec) const override { return false; }
+    bool hit(const Ray& ray, const LightSources& lights, float t_min, float t_max, RayHitRecord& rec) const override {
+        return false;
+    }
 };
 
 struct Cube : Object {
-    bool hit(const Ray& ray, float t_min, float t_max, RayHitRecord& rec) const override { return false; }
+    bool hit(const Ray& ray, const LightSources& lights, float t_min, float t_max, RayHitRecord& rec) const override {
+        return false;
+    }
 
     float width;
     float height;
 };
 
 struct Sphere : Object {
-    bool hit(const Ray& ray, float t_min, float t_max, RayHitRecord& rec) const override {
+    bool hit(const Ray& ray, const LightSources& lights, float t_min, float t_max, RayHitRecord& rec) const override {
         const glm::vec3 sphere_center_to_ray_orig = ray.orig - position;
         const auto a = dot(ray.dir, ray.dir);
         const auto half_b = dot(sphere_center_to_ray_orig, ray.dir);
@@ -128,38 +120,36 @@ struct Sphere : Object {
     float radius;
 };
 
-using SceneObject = std::variant<PointLight, Plane, Cube, Sphere>;
+// Scene handling
+
+using HittableObjectVariant = std::variant<Plane, Cube, Sphere>;
 
 class Scene {
    public:
     Scene() {}
 
-    template <class ObjectT>
-    void addObject(const std::string& obj_name = "New Object") {
-        static_assert(std::is_base_of_v<Object, ObjectT>, "Scene objects need to derive from Object struct!");
-        m_objects.push_back(std::make_shared<SceneObject>(ObjectT{}));
-        auto& added_obj_variant = *m_objects.back();
-        std::visit([&](auto&& obj_variant) { obj_variant.name = obj_name; }, added_obj_variant);
-    }
-
     bool addObject(const std::string& object_type) {
-        const auto next_id = static_cast<int>(m_objects.size()) + 1;
-        const auto next_id_str = std::to_string(next_id);
+        const auto next_light_id = static_cast<int>(m_lights.size()) + 1;
+        const auto next_light_id_str = std::to_string(next_light_id);
+        const auto next_obj_id = static_cast<int>(m_objects.size()) + 1;
+        const auto next_obj_id_str = std::to_string(next_obj_id);
 
         if (object_type == "Pointlight")
-            addObject<PointLight>(std::string("Pointlight") + next_id_str);
+            addLightSource<PointLight>(std::string("Pointlight") + next_light_id_str);
         else if (object_type == "Plane")
-            addObject<Plane>(std::string("Plane") + next_id_str);
+            addHittableObject<Plane>(std::string("Plane") + next_obj_id_str);
         else if (object_type == "Cube")
-            addObject<Cube>(std::string("Cube") + next_id_str);
+            addHittableObject<Cube>(std::string("Cube") + next_obj_id_str);
         else if (object_type == "Sphere")
-            addObject<Sphere>("Sphere" + next_id_str);
+            addHittableObject<Sphere>("Sphere" + next_obj_id_str);
         else {
             TRACEIT_LOG_ERROR("Unknown object type " << object_type << ".");
             return false;
         }
         return true;
     }
+
+    auto& lights() const { return m_lights; }
 
     auto& objects() const { return m_objects; }
 
@@ -168,8 +158,9 @@ class Scene {
         bool hit_any_object = false;
         auto closest_t = t_max;
 
-        for (auto object_variant : m_objects) {
-            if (std::visit([&](auto&& obj) { return obj.hit(ray, t_min, closest_t, temp_rec); }, *object_variant)) {
+        for (const auto& object_variant : m_objects) {
+            if (std::visit([&](auto&& obj) { return obj.hit(ray, m_lights, t_min, closest_t, temp_rec); },
+                           *object_variant)) {
                 hit_any_object = true;
                 closest_t = temp_rec.t;
                 rec = temp_rec;
@@ -178,18 +169,29 @@ class Scene {
         return hit_any_object;
     }
 
-    auto availableObjectTypes() const {
-        std::vector<std::string> obj_names;
-        for (auto& [_, val] : m_available_objects_map) {
-            obj_names.push_back(std::string(val));
-        }
-        return obj_names;
+    std::vector<std::string> availableObjectTypes() const { return m_available_object_types; }
+
+   private:
+    template <class ObjectT>
+    void addHittableObject(const std::string& obj_name = "New object") {
+        static_assert(std::is_base_of_v<Object, ObjectT>, "Scene objects need to derive from Object struct!");
+        m_objects.push_back(std::make_shared<HittableObjectVariant>(ObjectT{}));
+        auto& added_obj_variant = *m_objects.back();
+        std::visit([&](auto&& obj_variant) { obj_variant.name = obj_name; }, added_obj_variant);
+    }
+
+    template <class LightSourceT>
+    void addLightSource(const std::string& light_name = "New light") {
+        static_assert(std::is_base_of_v<LightSource, LightSourceT>,
+                      "Light source need to derive from LightSource struct!");
+        m_lights.push_back(std::make_shared<LightSourceT>());
+        auto& added_light = *m_lights.back();
+        added_light.name = light_name;
     }
 
    private:
-    const std::unordered_map<ObjectType, const char*> m_available_objects_map{{ObjectType::kPointlight, "Pointlight"},
-                                                                              {ObjectType::kPlane, "Plane"},
-                                                                              {ObjectType::kCube, "Cube"},
-                                                                              {ObjectType::kSphere, "Sphere"}};
-    std::vector<std::shared_ptr<SceneObject>> m_objects;
+    const std::vector<std::string> m_available_object_types{"Pointlight", "Plane", "Cube",
+                                                            "Sphere"};  // names of addable object types
+    std::vector<std::shared_ptr<LightSource>> m_lights;
+    std::vector<std::shared_ptr<HittableObjectVariant>> m_objects;
 };

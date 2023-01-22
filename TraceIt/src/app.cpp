@@ -42,7 +42,22 @@ class SceneLayer : public Layer {
         }
 
         ImGui::Separator();
-        if (ImGui::TreeNode("Scene Objects")) {
+
+        if (ImGui::TreeNode("Lights")) {
+            for (const auto& light : m_scene.lights()) {
+                if (ImGui::TreeNode(light->name.c_str())) {
+                    if (auto point_light = std::dynamic_pointer_cast<PointLight>(light)) {
+                        drawAndUpdateObjectSettings(*point_light);
+                    }
+                    ImGui::TreePop();
+                }
+            }
+            ImGui::TreePop();
+        }
+
+        ImGui::Separator();
+
+        if (ImGui::TreeNode("Hittable Objects")) {
             for (const auto& obj_variant : m_scene.objects()) {
                 std::visit(
                     [this](auto&& obj) {

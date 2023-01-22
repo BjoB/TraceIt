@@ -27,7 +27,7 @@ class Renderer {
 
    private:
     color getPixelColor(const Scene& scene, uint32_t x, uint32_t y);
-    void render(const SceneObject& object);
+    void render(const HittableObjectVariant& object);
     void render(const Plane& plane);
     void render(const Cube& cube);
     void render(const Sphere& sphere);
