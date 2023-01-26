@@ -36,18 +36,22 @@ class SceneLayer : public Layer {
             ImGui::EndCombo();
         }
 
-        bool add_object_pressed = ImGui::Button("+");
-        if (add_object_pressed) {
+        if (ImGui::Button("+")) {
             m_scene.addObject(m_cur_obj_selection);
         }
 
         ImGui::Separator();
 
-        if (ImGui::TreeNode("Lights")) {
-            for (const auto& light : m_scene.lights()) {
+        if (ImGui::TreeNodeEx("Lights", ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed)) {
+            for (auto light : m_scene.lights()) {
                 if (ImGui::TreeNode(light->name.c_str())) {
                     if (auto point_light = std::dynamic_pointer_cast<PointLight>(light)) {
                         drawAndUpdateObjectSettings(*point_light);
+                    }
+                    if (ImGui::Button("Remove")) {
+                        m_scene.eraseLightSource(light);
+                        ImGui::TreePop();
+                        break;
                     }
                     ImGui::TreePop();
                 }
@@ -57,16 +61,27 @@ class SceneLayer : public Layer {
 
         ImGui::Separator();
 
-        if (ImGui::TreeNode("Hittable Objects")) {
-            for (const auto& obj_variant : m_scene.objects()) {
+        if (ImGui::TreeNodeEx("Hittable Objects", ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed)) {
+            for (auto obj_variant : m_scene.objects()) {
+                bool is_current_element = false;
                 std::visit(
-                    [this](auto&& obj) {
+                    [&](auto&& obj) {
                         if (ImGui::TreeNode(obj.name.c_str())) {
                             drawAndUpdateObjectSettings(obj);
-                            ImGui::TreePop();
+                            is_current_element = true;
                         }
                     },
                     *obj_variant);
+
+                // easier to handle erase + treepop outside of the visit lambda
+                if (is_current_element) {
+                    if (ImGui::Button("Remove")) {
+                        m_scene.eraseHittableObject(obj_variant);
+                        ImGui::TreePop();
+                        break;
+                    }
+                    ImGui::TreePop();
+                }
             }
             ImGui::TreePop();
         }
@@ -77,7 +92,7 @@ class SceneLayer : public Layer {
         ImGui::Begin("Renderer");
 
         const auto frame_ms = static_cast<float>(m_frame_time_ms.count());
-        ImGui::Text("Last frametime: %.2f ms (%.2f fps)", frame_ms, 1e3 / frame_ms);
+        ImGui::Text("Framerate: %.1f ms/frame (%.1f fps)", frame_ms, 1e3 / frame_ms);
 
         if (ImGui::Button("Render")) {
             render();

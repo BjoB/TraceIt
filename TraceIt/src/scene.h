@@ -146,29 +146,37 @@ class Scene {
     Scene() {}
 
     bool addObject(const std::string& object_type) {
-        const auto next_light_id = static_cast<int>(m_lights.size()) + 1;
-        const auto next_light_id_str = std::to_string(next_light_id);
-        const auto next_obj_id = static_cast<int>(m_objects.size()) + 1;
-        const auto next_obj_id_str = std::to_string(next_obj_id);
-
-        if (object_type == "Pointlight")
-            addLightSource<PointLight>(std::string("Pointlight") + next_light_id_str);
-        else if (object_type == "Plane")
-            addHittableObject<Plane>(std::string("Plane") + next_obj_id_str);
-        else if (object_type == "Cube")
-            addHittableObject<Cube>(std::string("Cube") + next_obj_id_str);
-        else if (object_type == "Sphere")
-            addHittableObject<Sphere>("Sphere" + next_obj_id_str);
-        else {
-            TRACEIT_LOG_ERROR("Unknown object type " << object_type << ".");
-            return false;
+        if (object_type == "Pointlight") {
+            addLightSource<PointLight>(std::string("Pointlight") + nextId(m_lights));
+        } else {
+            const auto next_obj_id = nextId(m_objects);
+            if (object_type == "Plane")
+                addHittableObject<Plane>(std::string("Plane") + next_obj_id);
+            else if (object_type == "Cube")
+                addHittableObject<Cube>(std::string("Cube") + next_obj_id);
+            else if (object_type == "Sphere")
+                addHittableObject<Sphere>("Sphere" + next_obj_id);
+            else {
+                TRACEIT_LOG_ERROR("Unknown object type " << object_type << ".");
+                return false;
+            }
         }
         return true;
     }
 
-    auto& lights() const { return m_lights; }
+    template <typename ObjectT>
+    void eraseLightSource(std::shared_ptr<ObjectT>& obj_to_erase) {
+        m_lights.erase(std::remove(m_lights.begin(), m_lights.end(), obj_to_erase));
+    }
 
-    auto& objects() const { return m_objects; }
+    template <typename DerivedObjectT>
+    void eraseHittableObject(std::shared_ptr<DerivedObjectT>& obj_to_erase) {
+        m_objects.erase(std::remove(m_objects.begin(), m_objects.end(), obj_to_erase));
+    }
+
+    auto& lights() { return m_lights; }
+
+    auto& objects() { return m_objects; }
 
     bool hit(const Ray& ray, double t_min, double t_max, RayHitRecord& rec) const {
         RayHitRecord temp_rec;
@@ -204,6 +212,25 @@ class Scene {
         m_objects.push_back(std::make_shared<HittableObjectVariant>(ObjectT{}));
         auto& added_obj_variant = *m_objects.back();
         std::visit([&](auto&& obj_variant) { obj_variant.name = obj_name; }, added_obj_variant);
+    }
+
+    template <typename T>
+    std::string nextId(const std::vector<std::shared_ptr<T>>& scene_objects) {
+        std::string last_scene_obj_name = "0";
+        size_t num_scene_objects = 0;
+        if constexpr (std::is_base_of_v<LightSource, T>) {
+            num_scene_objects = m_lights.size();
+            if (num_scene_objects > 0) last_scene_obj_name = m_lights.back()->name;
+        } else if constexpr (std::is_base_of_v<HittableObjectVariant, T>) {
+            num_scene_objects = m_objects.size();
+            if (num_scene_objects > 0) {
+                std::visit([&](const auto& obj_variant) { last_scene_obj_name = obj_variant.name; }, *m_objects.back());
+            }
+        } else {
+            static_assert("Unsupported scene object type!");
+        }
+        const int last_id = stoi(last_scene_obj_name.substr(last_scene_obj_name.find_first_of("0123456789")));
+        return std::to_string(std::max(static_cast<int>(num_scene_objects) + 1, last_id + 1));
     }
 
    private:
