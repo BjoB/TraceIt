@@ -1,5 +1,7 @@
 // TraceIt Main Application
 
+#define STB_IMAGE_IMPLEMENTATION  // needed once to use stb_image header properly
+
 #include <chrono>
 #include <glm/glm.hpp>
 #include <string>
@@ -15,7 +17,7 @@ using namespace Ui;
 
 class SceneLayer : public Layer {
    public:
-    SceneLayer() : m_camera(glm::vec3(0.f, 0.f, -5.f), glm::vec3(0.f, 0.f, 1.f)), m_renderer(m_camera) {
+    SceneLayer() : m_camera(glm::vec3(0.f, 0.f, -20.f), glm::vec3(0.f, 0.f, 1.f)), m_renderer(m_camera) {
         m_object_types = m_scene.availableObjectTypes();
         m_cur_obj_selection = m_object_types[0];
     }
@@ -154,6 +156,12 @@ class SceneLayer : public Layer {
         float color[4] = {obj.color[0], obj.color[1], obj.color[2], 1.f};
         ImGui::ColorEdit3("color", color);
         obj.color = glm::vec4(color[0], color[1], color[2], 1.f);
+    }
+
+    void drawAndUpdateObjectSettings(ExtendedEllisWormhole& obj) const {
+        ImGui::SliderFloat("wormhole length", &obj.a, 0.f, 10.0f, "%.1f");
+        ImGui::SliderFloat("throat radius", &obj.rho, 0.f, 10.0f, "%.1f");
+        ImGui::SliderFloat("M", &obj.M, 0.f, 10.0f, "%.1f");
     }
 
    private:

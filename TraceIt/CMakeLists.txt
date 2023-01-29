@@ -76,4 +76,12 @@ target_link_libraries(studio
         glfw
         imgui
         Vulkan::Vulkan
+        stb
+)
+
+target_compile_definitions(studio
+    PRIVATE
+        WORMHOLE_1_IMG_SPHERE_PATH="${CMAKE_CURRENT_LIST_DIR}/data/interstellar_wormhole_1750x875.jpg"
+        WORMHOLE_2_IMG_SPHERE_PATH="${CMAKE_CURRENT_LIST_DIR}/data/interstellar_wormhole_2_1750x875.jpg"
+        WORMHOLE_3_IMG_SPHERE_PATH="${CMAKE_CURRENT_LIST_DIR}/data/interstellar_wormhole_3_1750x875.jpg"
 )
