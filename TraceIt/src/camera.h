@@ -30,7 +30,7 @@ class Camera {
     void updateRayDirections();
 
    private:
-    const float kFovy = glm::radians(45.f);
+    const float kFovy = glm::radians(60.f);
 
     std::vector<glm::vec3> m_ray_directions;
     uint32_t m_viewport_width = 0, m_viewport_height = 0;

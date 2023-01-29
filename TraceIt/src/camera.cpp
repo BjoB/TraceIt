@@ -39,7 +39,7 @@ void Camera::updateProjectionMatrix() {
 }
 
 void Camera::updateViewMatrix() {
-    m_view_mat = lookAt(m_origin, m_origin + m_direction, vec3(0.f, 1.f, 0.f));  // (0,1,0) = up-vector in world space
+    m_view_mat = lookAt(m_origin, m_origin + m_direction, vec3(1.f, 0.f, 0.f));  // last arg. = up-vector in world space
     m_view_mat_inv = inverse(m_view_mat);
 }
 
