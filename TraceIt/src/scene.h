@@ -166,11 +166,16 @@ struct ExtendedEllisWormhole : Object {
         };
 
         vec3 ray_march_pos = cartToSpherical(ray.orig);
-        vec3 ray_march_dir = cartToSpherical(ray.dir);
+        // vec3 ray_march_dir = cartToSpherical(ray.dir);
+        // rec.color = spherePixelColor(ray_march_dir);
+
+        // Assuming the camera to be directed towards the wormhole "center",
+        // the cartesian ray dir components can be reused to define the initial velocities
+        // in the global spherical coordinate system:
+        vec3 ray_march_dir = vec3(-ray.dir.z, ray.dir.x, -ray.dir.y);
         float time = 0.f;
         traceGeodesic(ray_march_pos, ray_march_dir, time);
         rec.color = spherePixelColor(ray_march_pos);
-        // rec.color = spherePixelColor(ray_march_dir);
 
         return true;
     }
@@ -191,7 +196,13 @@ struct ExtendedEllisWormhole : Object {
         time = x.x;
     }
 
-    vec4 initialMomenta(vec4 x, vec3 dir) const { return metric(x) * vec4(1.0, normalize(dir)); }
+    vec4 initialMomenta(vec4 x, vec3 dir) const {
+        // With p^i = g_{ij}(x) * dx^i/dt and given vector dir = cartesian coord. distances for initial delta_t=1
+        // and v.y = vx = r * dtheta/dt => dtheta/dt = vx / r ... etc.:
+        const float r = x.y;
+        const float theta = x.z;
+        return metric(x) * vec4(1.0, dir.x, dir.y / r, dir.z / (r * sin(theta)));
+    }
 
     void integrateOneStep(vec4& x, vec4& p) const {
         // using euler integration
@@ -226,8 +237,10 @@ struct ExtendedEllisWormhole : Object {
             r = rho;
         }
 
+        auto g_phiphi = powf(r * sin(x.z), 2);
         // coordinate singularities theta=0 and theta=pi, leading to non-invertible metric!
-        return mat44(-1, 0, 0, 0, 0, 1, 0, 0, 0, 0, r * r, 0, 0, 0, 0, powf(r * sin(x.z), 2));
+        if (g_phiphi == 0.f) g_phiphi += std::numeric_limits<float>::epsilon();
+        return mat44(-1, 0, 0, 0, 0, 1, 0, 0, 0, 0, r * r, 0, 0, 0, 0, g_phiphi);
     }
 
     void loadImages() {
@@ -266,6 +279,24 @@ struct ExtendedEllisWormhole : Object {
         auto theta = spherical_pos.y;
         auto phi = spherical_pos.z;
 
+        // Normalize angles to prevent out-of-bounds x,y pixel calc. below
+        // TODO: How to prevent this?
+        auto normalize0TokPi = [](float angle, const float factor = 1.f) {
+            angle = fmod(angle, factor * kPi);
+            if (angle < 0.f) angle += factor * kPi;
+            return angle;
+        };
+
+        if (theta < 0.f) return pixel_color;
+        // theta *= -1.f;
+        theta = normalize0TokPi(theta);
+        phi = normalize0TokPi(phi, 2.f);
+        if (theta < 0.f || theta > kPi || phi < 0.f || phi > 2 * kPi) {
+            TRACEIT_LOG_ERROR("Angles exceed limits:"
+                              << "theta=" << theta << ", phi=" << phi);
+            exit(1);
+        }
+
         auto rgbaToColor = [](unsigned char* pixel_offset) {
             vec4 color(0.f);
             color.r = static_cast<float>(pixel_offset[0]) / 255;
@@ -277,13 +308,13 @@ struct ExtendedEllisWormhole : Object {
 
         // phi range = [-pi,pi], theta range = [0, pi]
         if (l > 0.f && image_data_lower_sphere) {
-            auto x = static_cast<int>(image_lower_sphere_width * (phi - kPi) / (2 * kPi));
+            auto x = static_cast<int>(image_lower_sphere_width * (phi) / (2 * kPi));
             auto y = static_cast<int>(image_lower_sphere_height * (theta) / kPi);
             unsigned char* pixel_offset =
                 image_data_lower_sphere + (x + y * image_lower_sphere_width) * bytes_per_pixel;
             pixel_color = rgbaToColor(pixel_offset);
         } else if (image_data_upper_sphere) {
-            auto x = static_cast<int>(image_upper_sphere_width * (phi - kPi) / (2 * kPi));
+            auto x = static_cast<int>(image_upper_sphere_width * (phi) / (2 * kPi));
             auto y = static_cast<int>(image_upper_sphere_height * (theta) / kPi);
             unsigned char* pixel_offset =
                 image_data_upper_sphere + (x + y * image_upper_sphere_width) * bytes_per_pixel;
@@ -298,8 +329,8 @@ struct ExtendedEllisWormhole : Object {
     float M = 1.0f;   // mass, representing the gentleness of the interior-to-exterior transition of the wormhole
 
     const uint32_t bytes_per_pixel = 3;
-    CelestialSphereType lower_celestial_sphere{CelestialSphereType::Galaxy2};
-    CelestialSphereType upper_celestial_sphere{CelestialSphereType::Saturn};
+    CelestialSphereType lower_celestial_sphere{CelestialSphereType::Saturn};
+    CelestialSphereType upper_celestial_sphere{CelestialSphereType::Galaxy2};
     unsigned char* image_data_lower_sphere = nullptr;
     unsigned char* image_data_upper_sphere = nullptr;
     int image_lower_sphere_width = 0;
