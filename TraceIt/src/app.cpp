@@ -17,7 +17,7 @@ using namespace Ui;
 
 class SceneLayer : public Layer {
    public:
-    SceneLayer() : m_camera(glm::vec3(0.f, 0.f, -20.f), glm::vec3(0.f, 0.f, 1.f)), m_renderer(m_camera) {
+    SceneLayer() : m_camera(glm::vec3(0.f, 0.f, -10.f), glm::vec3(0.f, 0.f, 1.f)), m_renderer(m_camera) {
         m_object_types = m_scene.availableObjectTypes();
         m_cur_obj_selection = m_object_types[0];
     }
