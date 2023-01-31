@@ -9,7 +9,7 @@ I started this project as a basic 3D raytracer with the usual "hello world" stuf
 # Dependencies
 
 As a prerequisite VulkanSDK-1.3.236.0 (or later) has to be installed.
-Tested on Win 10, but should be adaptable to other systems.
+Tested on Win 10, but should be adaptable to other systems. Developed with Visual Studio 2022.
 
 Libraries automatically bundled with this repo:
 
@@ -21,8 +21,13 @@ Libraries automatically bundled with this repo:
 # References
 
 <a id="1">[1]</a> https://raytracing.github.io/books/RayTracingInOneWeekend.html
+
 <a id="2">[2]</a> https://www.youtube.com/@TheCherno
+
 <a id="3">[3]</a> Kip S. Thorne et al. (2015), [Visualizing Interstellar's Wormhole](https://arxiv.org/abs/1502.03809)
+
 <a id="4">[4]</a> Kip S. Thorne et al. (2015), [Gravitational lensing by spinning black holes in astrophysics, and in the movie Interstellar](https://arxiv.org/abs/1502.03808)
+
 <a id="4">[5]</a> Mykhailo Moroz, https://michaelmoroz.github.io/TracingGeodesics/
+
 <a id="5">[6]</a> https://www.youtube.com/@scottmanley
