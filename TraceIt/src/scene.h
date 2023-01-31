@@ -148,7 +148,7 @@ struct ExtendedEllisWormhole : Object {
     using vec4 = glm::vec4;
     using vec3 = glm::vec3;
 
-    enum class CelestialSphereType { Saturn, Galaxy1, Galaxy2 };
+    enum CelestialSphereType { Saturn = 0, Galaxy1, Galaxy2, Eve1, Eve2, Eve3, Eve4, Eve5 };
 
     ExtendedEllisWormhole() { loadImages(); }
 
@@ -261,6 +261,16 @@ struct ExtendedEllisWormhole : Object {
                     return WORMHOLE_2_IMG_SPHERE_PATH;
                 case CelestialSphereType::Galaxy2:
                     return WORMHOLE_3_IMG_SPHERE_PATH;
+                case CelestialSphereType::Eve1:
+                    return WORMHOLE_4_IMG_SPHERE_PATH;
+                case CelestialSphereType::Eve2:
+                    return WORMHOLE_5_IMG_SPHERE_PATH;
+                case CelestialSphereType::Eve3:
+                    return WORMHOLE_6_IMG_SPHERE_PATH;
+                case CelestialSphereType::Eve4:
+                    return WORMHOLE_7_IMG_SPHERE_PATH;
+                case CelestialSphereType::Eve5:
+                    return WORMHOLE_8_IMG_SPHERE_PATH;
                 default:
                     return WORMHOLE_1_IMG_SPHERE_PATH;
             }

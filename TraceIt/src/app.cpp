@@ -20,6 +20,8 @@ class SceneLayer : public Layer {
     SceneLayer() : m_camera(glm::vec3(0.f, 0.f, -10.f), glm::vec3(0.f, 0.f, 1.f)), m_renderer(m_camera) {
         m_object_types = m_scene.availableObjectTypes();
         m_cur_obj_selection = m_object_types[0];
+        m_cur_lower_sphere_selection = m_sphere_texture_names[0];
+        m_cur_upper_sphere_selection = m_sphere_texture_names[2];
     }
 
     virtual void onUpdate() override { m_camera.updatePose(); }
@@ -158,16 +160,49 @@ class SceneLayer : public Layer {
         obj.color = glm::vec4(color[0], color[1], color[2], 1.f);
     }
 
-    void drawAndUpdateObjectSettings(ExtendedEllisWormhole& obj) const {
+    void drawAndUpdateObjectSettings(ExtendedEllisWormhole& obj) {
+        auto spherTextureComboBox = [&](const char* label, std::string& selection_name,
+                                        ExtendedEllisWormhole::CelestialSphereType& sphere_type) {
+            if (ImGui::BeginCombo(label, selection_name.c_str())) {
+                for (int i = 0; i < m_sphere_texture_names.size(); ++i) {
+                    const auto* texture_name = m_sphere_texture_names[i];
+                    bool is_selected = (selection_name.c_str() == texture_name);
+                    if (ImGui::Selectable(texture_name, is_selected)) {
+                        selection_name = std::string(texture_name);
+                        sphere_type = static_cast<ExtendedEllisWormhole::CelestialSphereType>(i);
+                        obj.loadImages();
+                    }
+                    if (is_selected) ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
+            }
+        };
+
+        spherTextureComboBox("Lower Celestial Sphere Texture", m_cur_lower_sphere_selection,
+                             obj.lower_celestial_sphere);
+        spherTextureComboBox("Upper Celestial Sphere Texture", m_cur_upper_sphere_selection,
+                             obj.upper_celestial_sphere);
+
         ImGui::SliderFloat("wormhole length", &obj.a, 0.f, 10.0f, "%.1f");
         ImGui::SliderFloat("throat radius", &obj.rho, 0.f, 10.0f, "%.1f");
         ImGui::SliderFloat("M", &obj.M, 0.f, 10.0f, "%.1f");
     }
 
    private:
+    const std::vector<const char*> m_sphere_texture_names = {"Interstellar's Saturn Site",
+                                                             "Galaxy String",
+                                                             "Interstellar's Far Galaxy",
+                                                             "Bluegrey Nebula",
+                                                             "Brown Nebula",
+                                                             "Green Nebula",
+                                                             "Greenish-Brown Nebula",
+                                                             "Smokey Nebula"};
+
     std::chrono::milliseconds m_frame_time_ms{0};
     std::vector<std::string> m_object_types;
     std::string m_cur_obj_selection;
+    std::string m_cur_lower_sphere_selection;
+    std::string m_cur_upper_sphere_selection;
     Scene m_scene;
     Renderer m_renderer;
     Camera m_camera;

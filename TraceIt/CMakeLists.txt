@@ -84,4 +84,9 @@ target_compile_definitions(studio
         WORMHOLE_1_IMG_SPHERE_PATH="${CMAKE_CURRENT_LIST_DIR}/data/interstellar_wormhole_1750x875.jpg"
         WORMHOLE_2_IMG_SPHERE_PATH="${CMAKE_CURRENT_LIST_DIR}/data/interstellar_wormhole_2_1750x875.jpg"
         WORMHOLE_3_IMG_SPHERE_PATH="${CMAKE_CURRENT_LIST_DIR}/data/interstellar_wormhole_3_1750x875.jpg"
+        WORMHOLE_4_IMG_SPHERE_PATH="${CMAKE_CURRENT_LIST_DIR}/data/space_eve_online_8K_bluegrey_nebula.jpg"
+        WORMHOLE_5_IMG_SPHERE_PATH="${CMAKE_CURRENT_LIST_DIR}/data/space_eve_online_8K_brown_nebula.jpg"
+        WORMHOLE_6_IMG_SPHERE_PATH="${CMAKE_CURRENT_LIST_DIR}/data/space_eve_online_8K_green_nebula.jpg"
+        WORMHOLE_7_IMG_SPHERE_PATH="${CMAKE_CURRENT_LIST_DIR}/data/space_eve_online_8K_nebula.jpg"
+        WORMHOLE_8_IMG_SPHERE_PATH="${CMAKE_CURRENT_LIST_DIR}/data/space_eve_online_8K_smokey_nebula.jpg"
 )
