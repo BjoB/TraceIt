@@ -178,10 +178,12 @@ class SceneLayer : public Layer {
             }
         };
 
-        spherTextureComboBox("Lower Celestial Sphere Texture", m_cur_lower_sphere_selection,
+        spherTextureComboBox("Lower Sphere", m_cur_lower_sphere_selection,
                              obj.lower_celestial_sphere);
-        spherTextureComboBox("Upper Celestial Sphere Texture", m_cur_upper_sphere_selection,
+        spherTextureComboBox("Upper Sphere", m_cur_upper_sphere_selection,
                              obj.upper_celestial_sphere);
+
+        ImGui::Checkbox("Reuse eq. plane ray paths", &obj.compute_rays_in_eq_plane);
 
         ImGui::SliderFloat("wormhole length", &obj.a, 0.f, 10.0f, "%.1f");
         ImGui::SliderFloat("throat radius", &obj.rho, 0.f, 10.0f, "%.1f");
