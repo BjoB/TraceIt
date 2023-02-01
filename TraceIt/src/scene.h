@@ -5,6 +5,7 @@
 #include <cmath>
 #include <glm/glm.hpp>
 #include <iostream>
+#include <map>
 #include <memory>
 #include <string>
 #include <type_traits>
@@ -68,7 +69,8 @@ enum MaterialType { Lambertian, Metal };
 struct Object {
     virtual ~Object() = default;
 
-    virtual bool hit(const Ray& ray, const LightSources& lights, float t_min, float t_max, RayHitRecord& rec) const = 0;
+    virtual bool hit(const Ray& ray, const LightSources& lights, float t_min, float t_max, RayHitRecord& rec) = 0;
+    virtual void cleanUp() {}
 
     std::string name;
     glm::vec3 position;
@@ -77,13 +79,13 @@ struct Object {
 };
 
 struct Plane : Object {
-    bool hit(const Ray& ray, const LightSources& lights, float t_min, float t_max, RayHitRecord& rec) const override {
+    bool hit(const Ray& ray, const LightSources& lights, float t_min, float t_max, RayHitRecord& rec) override {
         return false;
     }
 };
 
 struct Cube : Object {
-    bool hit(const Ray& ray, const LightSources& lights, float t_min, float t_max, RayHitRecord& rec) const override {
+    bool hit(const Ray& ray, const LightSources& lights, float t_min, float t_max, RayHitRecord& rec) override {
         return false;
     }
 
@@ -92,7 +94,7 @@ struct Cube : Object {
 };
 
 struct Sphere : Object {
-    bool hit(const Ray& ray, const LightSources& lights, float t_min, float t_max, RayHitRecord& rec) const override {
+    bool hit(const Ray& ray, const LightSources& lights, float t_min, float t_max, RayHitRecord& rec) override {
         const glm::vec3 sphere_center_to_ray_orig = ray.orig - position;
         const auto a = dot(ray.dir, ray.dir);
         const auto half_b = dot(sphere_center_to_ray_orig, ray.dir);
@@ -142,17 +144,25 @@ struct Sphere : Object {
 
 /// Based on the wormhole metric described in https://arxiv.org/abs/1502.03809,
 /// see section "Dneg wormhole without gravity". Numeric geodesics integration
-/// is performed using the hamiltonian formulation of the metric.
+/// is performed by calculating the hamiltonian of each ray.
 struct ExtendedEllisWormhole : Object {
     using mat44 = glm::mat4x4;
     using vec4 = glm::vec4;
     using vec3 = glm::vec3;
+    using vec2 = glm::vec2;
+
+    // Procedure used for huge performance boost:
+    // The final deflection angle of each ray only depends on the angular momentum in the eq. plane,
+    // thus we can calculate it once and reuse, IF the coordinate system is rotated accordingly.
+    // With the mapping abs(p_y) -> (l, phi_eq) and the stored rotation per ray, the final (l, theta, phi)
+    // can be restored.
+    using TargetCoordLookup = std::map<float, vec2>;
 
     enum CelestialSphereType { Saturn = 0, Galaxy1, Galaxy2, Eve1, Eve2, Eve3, Eve4, Eve5 };
 
     ExtendedEllisWormhole() { loadImages(); }
 
-    bool hit(const Ray& ray, const LightSources& lights, float t_min, float t_max, RayHitRecord& rec) const override {
+    bool hit(const Ray& ray, const LightSources& lights, float t_min, float t_max, RayHitRecord& rec) override {
         // unused for wormhole rendering
         (void)lights;
         (void)t_min;
@@ -165,20 +175,59 @@ struct ExtendedEllisWormhole : Object {
             return vec3(r, acos(v.x / r), atan2(v.y, v.z));
         };
 
+        auto sphericalToCart = [](const vec3& v) {
+            return vec3(v.x * cos(v.y), v.x * sin(v.y) * sin(v.z), v.x * sin(v.y) * cos(v.z));
+        };
+
         vec3 ray_march_pos = cartToSpherical(ray.orig);
         // vec3 ray_march_dir = cartToSpherical(ray.dir);
         // rec.color = spherePixelColor(ray_march_dir);
 
-        // Assuming the camera to be directed towards the wormhole "center",
-        // the cartesian ray dir components can be reused to define the initial velocities
-        // in the global spherical coordinate system:
-        vec3 ray_march_dir = vec3(-ray.dir.z, ray.dir.x, -ray.dir.y);
-        float time = 0.f;
-        traceGeodesic(ray_march_pos, ray_march_dir, time);
+        if (compute_rays_in_eq_plane) {
+            float angle_to_eq_plane = atan2(ray.dir.x, ray.dir.y);
+            auto cam_dir = vec3(0.f, 0.f, 1.f);
+            auto rot_mat = glm::rotate(mat44(1.f), angle_to_eq_plane, cam_dir);
+            auto ray_dir_rotated_to_eq = vec3(rot_mat * vec4(ray.dir, 1.0));
+
+            // restricted to eq. plane
+            auto ray_march_dir = vec3(-ray_dir_rotated_to_eq.z, 0.f, -ray_dir_rotated_to_eq.y);
+
+            float abs_eq_angular_velo = abs(ray_march_dir.z);
+
+            auto it = eq_target_coord_lookup.find(abs_eq_angular_velo);
+            if (it != eq_target_coord_lookup.end()) {
+                vec2 eq_target_coords = it->second;
+                float eq_l = eq_target_coords.x;
+                float eq_phi = eq_target_coords.y;
+                // get ray_march_pos from eq. plane target point (eq_l, eq_phi)
+                ray_march_pos = vec3(eq_l, kPi / 2.f, eq_phi);
+            } else {
+                float time = 0.f;
+                traceGeodesic(ray_march_pos, ray_march_dir, time);  // TODO: use a 2D version here?
+                eq_target_coord_lookup.insert(
+                    std::make_pair(abs_eq_angular_velo, vec2(ray_march_pos.x, ray_march_pos.z)));
+            }
+
+            // sign needs be preserved, as l will become r > 0 after coord. transformation
+            const auto l = ray_march_pos.x;
+            ray_march_pos = inverse(rot_mat) * vec4(sphericalToCart(ray_march_pos), 1.f);  // rotate back
+            ray_march_pos = cartToSpherical(ray_march_pos);
+            ray_march_pos.x = l;
+        } else {
+            // Assuming the camera to be directed towards the wormhole "center" along the z-axis.
+            // The cartesian ray direction components can be reused to define the initial velocities
+            // in the global spherical coordinate system:
+            auto ray_march_dir = vec3(-ray.dir.z, ray.dir.x, -ray.dir.y);
+
+            float time = 0.f;
+            traceGeodesic(ray_march_pos, ray_march_dir, time);
+        }
         rec.color = spherePixelColor(ray_march_pos);
 
         return true;
     }
+
+    void cleanUp() override { eq_target_coord_lookup.clear(); }
 
     // pos, dir given in spherical coordinates
     void traceGeodesic(vec3& pos, vec3& dir, float& time) const {
@@ -197,7 +246,7 @@ struct ExtendedEllisWormhole : Object {
     }
 
     vec4 initialMomenta(vec4 x, vec3 dir) const {
-        // With p^i = g_{ij}(x) * dx^i/dt and given vector dir = cartesian coord. distances for initial delta_t=1
+        // With p^i = g_{ij}(x) * dx^i/dt and given dir = cartesian coord. distances for initial delta_t=1
         // and v.y = vx = r * dtheta/dt => dtheta/dt = vx / r ... etc.:
         const float r = x.y;
         const float theta = x.z;
@@ -276,7 +325,7 @@ struct ExtendedEllisWormhole : Object {
             }
         };
 
-        // Load from disk into a raw RGBA buffer
+        // Load from disk into a raw RGB buffer
         image_data_lower_sphere = stbi_load(getImgPath(lower_celestial_sphere), &image_lower_sphere_width,
                                             &image_lower_sphere_height, nullptr, bytes_per_pixel);
         image_data_upper_sphere = stbi_load(getImgPath(upper_celestial_sphere), &image_upper_sphere_width,
@@ -316,7 +365,7 @@ struct ExtendedEllisWormhole : Object {
             return color;
         };
 
-        // phi range = [-pi,pi], theta range = [0, pi]
+        // phi range = [0,2*pi], theta range = [0, pi]
         if (l > 0.f && image_data_lower_sphere) {
             auto x = static_cast<int>(image_lower_sphere_width * (phi) / (2 * kPi));
             auto y = static_cast<int>(image_lower_sphere_height * (theta) / kPi);
@@ -336,7 +385,12 @@ struct ExtendedEllisWormhole : Object {
 
     float a = 1.f;    // half wormhole length
     float rho = 1.f;  // wormhole throat radius
-    float M = 1.0f;   // mass, representing the gentleness of the interior-to-exterior transition of the wormhole
+    float M = 2.0f;   // mass, representing the gentleness of the interior-to-exterior transition of the wormhole
+
+    // Only possible if camera points towards wormhole center!
+    // Rotates ray before start of integration to eq. plane and reverts that before pixel color retrieval
+    bool compute_rays_in_eq_plane = true;
+    TargetCoordLookup eq_target_coord_lookup;
 
     const uint32_t bytes_per_pixel = 3;
     CelestialSphereType lower_celestial_sphere{CelestialSphereType::Saturn};
@@ -407,6 +461,12 @@ class Scene {
             }
         }
         return hit_any_object;
+    }
+
+    void cleanUp() {
+        for (const auto& object_variant : m_objects) {
+            std::visit([&](auto&& obj) { obj.cleanUp(); }, *object_variant);
+        }
     }
 
     std::vector<std::string> availableObjectTypes() const { return m_available_object_types; }

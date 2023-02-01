@@ -21,7 +21,7 @@ class Renderer {
     Renderer& operator=(const Renderer&) = delete;
 
     void refresh(uint32_t width, uint32_t height);
-    void render(const Scene& scene);
+    void render(Scene& scene);
 
     std::shared_ptr<Image> image() const { return m_image; }
 

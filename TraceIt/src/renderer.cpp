@@ -36,7 +36,7 @@ color Renderer::getPixelColor(const Scene& scene, uint32_t x, uint32_t y) {
     return m_background_color;
 }
 
-void Renderer::render(const Scene& scene) {
+void Renderer::render(Scene& scene) {
     for (uint32_t y = 0; y < m_image->height(); ++y) {
         for (uint32_t x = 0; x < m_image->width(); ++x) {
             const auto color = getPixelColor(scene, x, y);
@@ -44,4 +44,6 @@ void Renderer::render(const Scene& scene) {
         }
     }
     m_image->setData(m_img_data);
+
+    scene.cleanUp();
 }
