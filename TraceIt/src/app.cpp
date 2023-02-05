@@ -18,13 +18,18 @@ using namespace Ui;
 class SceneLayer : public Layer {
    public:
     SceneLayer() : m_camera(glm::vec3(0.f, 0.f, -10.f), glm::vec3(0.f, 0.f, 1.f)), m_renderer(m_camera) {
+        m_last_stop_time = std::chrono::high_resolution_clock::now();
         m_object_types = m_scene.availableObjectTypes();
         m_cur_obj_selection = m_object_types[0];
         m_cur_lower_sphere_selection = m_sphere_texture_names[0];
         m_cur_upper_sphere_selection = m_sphere_texture_names[2];
     }
 
-    virtual void onUpdate() override { m_camera.updatePose(); }
+    virtual void onUpdate() override {
+        // TODO: camera movement
+        // m_camera.updatePose(new_origin, new_direction);
+        m_camera.updatePose();
+    }
 
     virtual void onRender() override {
         ImGui::Begin("Scene Explorer");
@@ -97,10 +102,16 @@ class SceneLayer : public Layer {
 
         const auto frame_ms = static_cast<float>(m_frame_time_ms.count());
         ImGui::Text("Framerate: %.1f ms/frame (%.1f fps)", frame_ms, 1e3 / frame_ms);
+        const auto cam_pos = m_camera.position();
+        ImGui::Text("Camera position: (%.1f, %.1f, %.1f)", cam_pos.x, cam_pos.y, cam_pos.z);
 
-        if (ImGui::Button("Render")) {
+        ImGui::Checkbox("Auto rendering", &m_auto_render);
+
+        if (ImGui::Button("Render") || m_auto_render) {
             render();
         }
+
+        ImGui::Separator();
 
         const auto region_avail = ImGui::GetContentRegionAvail();
         m_render_image_width = region_avail.x;
@@ -118,12 +129,17 @@ class SceneLayer : public Layer {
 
    private:
     void render() {
-        const auto start_time = std::chrono::high_resolution_clock::now();
+        const auto time_since_last_render_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::high_resolution_clock::now() - m_last_stop_time);
+        if (time_since_last_render_ms.count() < 10) {  // cap to 100 fps
+            return;
+        }
+        const auto start_time = m_auto_render ? m_last_stop_time : std::chrono::high_resolution_clock::now();
         m_camera.refresh(m_render_image_width, m_render_image_height);
         m_renderer.refresh(m_render_image_width, m_render_image_height);
         m_renderer.render(m_scene);
-        const auto stop_time = std::chrono::high_resolution_clock::now();
-        m_frame_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(stop_time - start_time);
+        m_last_stop_time = std::chrono::high_resolution_clock::now();
+        m_frame_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(m_last_stop_time - start_time);
     }
 
     void drawAndUpdateObjectSettings(PointLight& obj) const {
@@ -178,10 +194,8 @@ class SceneLayer : public Layer {
             }
         };
 
-        spherTextureComboBox("Lower Sphere", m_cur_lower_sphere_selection,
-                             obj.lower_celestial_sphere);
-        spherTextureComboBox("Upper Sphere", m_cur_upper_sphere_selection,
-                             obj.upper_celestial_sphere);
+        spherTextureComboBox("Lower Sphere", m_cur_lower_sphere_selection, obj.lower_celestial_sphere);
+        spherTextureComboBox("Upper Sphere", m_cur_upper_sphere_selection, obj.upper_celestial_sphere);
 
         ImGui::Checkbox("Reuse eq. plane ray paths", &obj.compute_rays_in_eq_plane);
 
@@ -201,6 +215,7 @@ class SceneLayer : public Layer {
                                                              "Smokey Nebula"};
 
     std::chrono::milliseconds m_frame_time_ms{0};
+    std::chrono::steady_clock::time_point m_last_stop_time;
     std::vector<std::string> m_object_types;
     std::string m_cur_obj_selection;
     std::string m_cur_lower_sphere_selection;
@@ -208,6 +223,7 @@ class SceneLayer : public Layer {
     Scene m_scene;
     Renderer m_renderer;
     Camera m_camera;
+    bool m_auto_render = false;
     uint32_t m_render_image_width = 0;
     uint32_t m_render_image_height = 0;
 };
