@@ -151,9 +151,9 @@ struct ExtendedEllisWormhole : Object {
     using vec3 = glm::vec3;
     using vec2 = glm::vec2;
 
-    // Procedure used for huge performance boost:
-    // The final deflection angle of each ray only depends on the angular momentum in the eq. plane,
-    // thus we can calculate it once and reuse, IF the coordinate system is rotated accordingly.
+    // Procedure used for faster rendering:
+    // The final angular position of each ray only depends on the angular momentum in the eq. plane,
+    // thus we can calculate it once and reuse it, IF the coordinate system is rotated accordingly.
     // With the mapping abs(p_y) -> (l, phi_eq) and the stored rotation per ray, the final (l, theta, phi)
     // can be restored.
     using TargetCoordLookup = std::map<float, vec2>;
