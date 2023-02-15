@@ -25,11 +25,7 @@ class SceneLayer : public Layer {
         m_cur_upper_sphere_selection = m_sphere_texture_names[2];
     }
 
-    virtual void onUpdate() override {
-        // TODO: camera movement
-        // m_camera.updatePose(new_origin, new_direction);
-        m_camera.updatePose();
-    }
+    virtual void onUpdate() override { m_camera.updatePose(static_cast<float>(m_frame_time_ms.count()) / 1e3); }
 
     virtual void onRender() override {
         ImGui::Begin("Scene Explorer");

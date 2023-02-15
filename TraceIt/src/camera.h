@@ -10,7 +10,9 @@ class Camera {
     Camera(const Camera&) = delete;
     Camera& operator=(const Camera&) = delete;
 
-    void updatePose();
+    void updatePose(float time_delta_s);
+
+    void updatePose(glm::vec3 new_origin, glm::vec3 new_direction);
 
     void refresh(uint32_t viewport_width, uint32_t viewport_height);
 
@@ -30,7 +32,7 @@ class Camera {
     void updateRayDirections();
 
    private:
-    const float kFovy = glm::radians(90.f);
+    const float kFovy = glm::radians(45.f);
 
     std::vector<glm::vec3> m_ray_directions;
     uint32_t m_viewport_width = 0, m_viewport_height = 0;

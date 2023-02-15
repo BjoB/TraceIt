@@ -1,4 +1,5 @@
 #include "camera.h"
+#include "input.h"
 
 using namespace glm;
 
@@ -14,11 +15,31 @@ Camera::Camera(vec3 origin, vec3 direction, float near_clip, float far_clip)
     m_ray_directions.resize(m_viewport_width * m_viewport_height);
 }
 
-void Camera::updatePose() {
-    // TODO: add movement of camera
-    if (!m_pose_initialized) {
+void Camera::updatePose(float time_delta_s) {
+    const float cam_speed = 10.f;
+    bool cam_moved = false;
+
+    if (input::forwardPressed()) {
+        m_origin += m_direction * cam_speed * time_delta_s;
+        cam_moved = true;
+    }
+
+    if (input::backwardPressed()) {
+        m_origin -= m_direction * cam_speed * time_delta_s;
+        cam_moved = true;
+    }
+
+    if (!m_pose_initialized || cam_moved) {
         updateViewMatrix();
         m_pose_initialized = true;
+    }
+}
+
+void Camera::updatePose(vec3 new_origin, vec3 new_direction) {
+    if (new_origin != m_origin || new_direction != m_direction) {
+        m_origin = new_origin;
+        m_direction = new_direction;
+        updateViewMatrix();
     }
 }
 
