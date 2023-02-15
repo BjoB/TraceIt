@@ -51,7 +51,7 @@ target_sources(imgui PRIVATE
     ${imgui_SRC_DIR}/backends/imgui_impl_glfw.cpp
     ${imgui_SRC_DIR}/backends/imgui_impl_vulkan.h
     ${imgui_SRC_DIR}/backends/imgui_impl_vulkan.cpp
-)
+ "src/input.h")
 
 target_link_libraries(imgui PRIVATE glfw Vulkan::Vulkan)
 
@@ -62,6 +62,7 @@ add_executable(studio
     "src/log.h"
     "src/camera.cpp"
     "src/camera.h"
+    "src/input.h"
     "src/image.cpp"
     "src/image.h"
     "src/renderer.cpp"
