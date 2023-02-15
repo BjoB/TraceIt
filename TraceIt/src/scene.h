@@ -139,7 +139,7 @@ struct Sphere : Object {
         return true;
     }
 
-    float radius;
+    float radius = 1.f;
 };
 
 /// Based on the wormhole metric described in https://arxiv.org/abs/1502.03809,
