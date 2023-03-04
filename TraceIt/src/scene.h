@@ -383,9 +383,9 @@ struct ExtendedEllisWormhole : Object {
         return pixel_color;
     }
 
-    float a = 1.f;    // half wormhole length
-    float rho = 1.f;  // wormhole throat radius
-    float M = 2.0f;   // mass, representing the gentleness of the interior-to-exterior transition of the wormhole
+    float a = 0.1f;   // half wormhole length
+    float rho = 2.f;  // wormhole throat radius
+    float M = 0.2f;   // mass, representing the gentleness of the interior-to-exterior transition of the wormhole
 
     // Only possible if camera points towards wormhole center!
     // Rotates ray before start of integration to eq. plane and reverts that before pixel color retrieval
