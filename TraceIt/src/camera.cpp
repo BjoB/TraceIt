@@ -16,8 +16,10 @@ Camera::Camera(vec3 origin, vec3 direction, float near_clip, float far_clip)
 }
 
 void Camera::updatePose(float time_delta_s) {
-    const float cam_speed = 10.f;
+    const float cam_speed = 5.f;
     bool cam_moved = false;
+
+    if (time_delta_s > 1.f) time_delta_s = 0.1f; // hacky way to reset after long running rendering
 
     if (input::forwardPressed()) {
         m_origin += m_direction * cam_speed * time_delta_s;

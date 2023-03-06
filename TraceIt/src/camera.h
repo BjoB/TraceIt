@@ -10,6 +10,7 @@ class Camera {
     Camera(const Camera&) = delete;
     Camera& operator=(const Camera&) = delete;
 
+    // for interactive movement of camera
     void updatePose(float time_delta_s);
 
     void updatePose(glm::vec3 new_origin, glm::vec3 new_direction);
