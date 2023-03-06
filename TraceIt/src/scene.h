@@ -287,8 +287,8 @@ struct ExtendedEllisWormhole : Object {
         }
 
         auto g_phiphi = powf(r * sin(x.z), 2);
-        // coordinate singularities theta=0 and theta=pi, leading to non-invertible metric!
-        if (g_phiphi == 0.f) g_phiphi += std::numeric_limits<float>::epsilon();
+        
+        if (g_phiphi == 0.f) g_phiphi += std::numeric_limits<float>::epsilon();  // make sure metric is invertible!
         return mat44(-1, 0, 0, 0, 0, 1, 0, 0, 0, 0, r * r, 0, 0, 0, 0, g_phiphi);
     }
 
@@ -367,14 +367,14 @@ struct ExtendedEllisWormhole : Object {
 
         // phi range = [0,2*pi], theta range = [0, pi]
         if (l > 0.f && image_data_lower_sphere) {
-            auto x = static_cast<int>(image_lower_sphere_width * (phi) / (2 * kPi));
-            auto y = static_cast<int>(image_lower_sphere_height * (theta) / kPi);
+            auto x = static_cast<int>(image_lower_sphere_width * phi / (2 * kPi));
+            auto y = static_cast<int>(image_lower_sphere_height * theta / kPi);
             unsigned char* pixel_offset =
                 image_data_lower_sphere + (x + y * image_lower_sphere_width) * bytes_per_pixel;
             pixel_color = rgbaToColor(pixel_offset);
         } else if (image_data_upper_sphere) {
-            auto x = static_cast<int>(image_upper_sphere_width * (phi) / (2 * kPi));
-            auto y = static_cast<int>(image_upper_sphere_height * (theta) / kPi);
+            auto x = static_cast<int>(image_upper_sphere_width * phi / (2 * kPi));
+            auto y = static_cast<int>(image_upper_sphere_height * theta / kPi);
             unsigned char* pixel_offset =
                 image_data_upper_sphere + (x + y * image_upper_sphere_width) * bytes_per_pixel;
             pixel_color = rgbaToColor(pixel_offset);
