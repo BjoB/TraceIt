@@ -55,33 +55,39 @@ target_sources(imgui PRIVATE
 
 target_link_libraries(imgui PRIVATE glfw Vulkan::Vulkan)
 
-# Build --------------------------------------------------------------
+# cxxopts
 
-add_executable(studio
-    "src/app.cpp"
-    "src/log.h"
-    "src/camera.cpp"
-    "src/camera.h"
-    "src/input.h"
-    "src/image.cpp"
-    "src/image.h"
-    "src/renderer.cpp"
-    "src/renderer.h"
-    "src/scene.h"
-    "src/ui.cpp"
-    "src/ui.h"
+add_library(cxxopts INTERFACE)
+
+target_include_directories(cxxopts INTERFACE "${CMAKE_CURRENT_LIST_DIR}/3rdparty/cxxopts")
+
+# Build TraceIt lib + apps -----------------------------------------------------------
+
+add_library(traceit_lib)
+
+target_sources(traceit_lib
+    PUBLIC
+        "src/camera.cpp"
+        "src/image.cpp"
+        "src/renderer.cpp"
+        "src/ui.cpp"
 )
 
-target_link_libraries(studio
-    PRIVATE
+target_include_directories(traceit_lib
+    PUBLIC
+        src
+)
+
+target_link_libraries(traceit_lib
+    PUBLIC
         glfw
         imgui
         Vulkan::Vulkan
         stb
 )
 
-target_compile_definitions(studio
-    PRIVATE
+target_compile_definitions(traceit_lib
+    PUBLIC
         WORMHOLE_1_IMG_SPHERE_PATH="${CMAKE_CURRENT_LIST_DIR}/data/interstellar_wormhole_1750x875.jpg"
         WORMHOLE_2_IMG_SPHERE_PATH="${CMAKE_CURRENT_LIST_DIR}/data/interstellar_wormhole_2_1750x875.jpg"
         WORMHOLE_3_IMG_SPHERE_PATH="${CMAKE_CURRENT_LIST_DIR}/data/interstellar_wormhole_3_1750x875.jpg"
@@ -90,4 +96,27 @@ target_compile_definitions(studio
         WORMHOLE_6_IMG_SPHERE_PATH="${CMAKE_CURRENT_LIST_DIR}/data/space_eve_online_8K_green_nebula.jpg"
         WORMHOLE_7_IMG_SPHERE_PATH="${CMAKE_CURRENT_LIST_DIR}/data/space_eve_online_8K_nebula.jpg"
         WORMHOLE_8_IMG_SPHERE_PATH="${CMAKE_CURRENT_LIST_DIR}/data/space_eve_online_8K_smokey_nebula.jpg"
+)
+
+# full render GUI
+
+add_executable(traceit_studio
+    "src/app.cpp"
+)
+
+target_link_libraries(traceit_studio
+    PRIVATE
+        traceit_lib
+)
+
+# CLI-based GR wormhole renderer
+
+add_executable(traceit_cli
+    "src/wormhole_app_cli.cpp"
+)
+
+target_link_libraries(traceit_cli
+    PRIVATE
+        traceit_lib
+        cxxopts
 )
