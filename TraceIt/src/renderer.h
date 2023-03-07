@@ -24,6 +24,7 @@ class Renderer {
     void render(Scene& scene);
 
     std::shared_ptr<Image> image() const { return m_image; }
+    uint32_t* imageData() const { return m_img_data; }
 
    private:
     color getPixelColor(const Scene& scene, uint32_t x, uint32_t y);

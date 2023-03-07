@@ -16,10 +16,21 @@
 
 constexpr float kOutputFrameRate = 30.f;
 
+// z-dir: away from camera, y-dir: right-handed
+auto cartToSpherical(const glm::vec3& v) {
+    auto r = sqrt(dot(v, v));
+    return glm::vec3(r, acos(v.x / r), atan2(v.y, v.z));
+};
+
+auto sphericalToCart(const glm::vec3& v) {
+    return glm::vec3(v.x * cos(v.y), v.x * sin(v.y) * sin(v.z), v.x * sin(v.y) * cos(v.z));
+};
+
 class SceneSetup {
    public:
     SceneSetup(uint32_t image_width, uint32_t image_height, glm::vec3 cam_pos, glm::vec3 cam_dir,
-               float wormhole_length_a, float wormhole_throat_radius_rho, float wormhole_mass_param)
+               float wormhole_length_a, float wormhole_throat_radius_rho, float wormhole_mass_param,
+               int lower_sphere_idx, int upper_sphere_idx)
         : m_render_image_width(image_width),
           m_render_image_height(image_height),
           m_camera(cam_pos, cam_dir),
@@ -29,17 +40,12 @@ class SceneSetup {
         m_wormhole_obj->a = wormhole_length_a;
         m_wormhole_obj->rho = wormhole_throat_radius_rho;
         m_wormhole_obj->M = wormhole_mass_param;
+        setWormholeCelestialSpheres(lower_sphere_idx, upper_sphere_idx);
     }
 
-    void update() {
-        const auto new_pos = glm::vec3();
-        const auto new_dir = glm::vec3();
-        m_camera.updatePose(new_pos, new_dir);
-    }
+    void update(glm::vec3 cam_pos, glm::vec3 cam_dir) { m_camera.updatePose(cam_pos, cam_dir); }
 
     void render() {
-        const auto cam_pos = m_camera.position();
-
         const auto start_time = std::chrono::high_resolution_clock::now();
         m_camera.refresh(m_render_image_width, m_render_image_height);
         m_renderer.refresh(m_render_image_width, m_render_image_height);
@@ -47,11 +53,10 @@ class SceneSetup {
         m_frame_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::high_resolution_clock::now() - start_time);
 
-        const auto image = m_renderer.image();
-        if (image) {
+        if (m_renderer.image()) {
             const auto img_filename = std::string("wh_") + std::to_string(m_cur_img_index) + std::string(".png");
-            // stbi_write_png(img_filename.c_str(), m_render_image_width, m_render_image_height, 3, image.get(),
-            //                m_render_image_width * 3);
+            stbi_write_png(img_filename.c_str(), m_render_image_width, m_render_image_height, 3, m_renderer.imageData(),
+                           m_render_image_width * 3);
             ++m_cur_img_index;
         }
     }
@@ -103,8 +108,10 @@ int main(int argc, char** argv) {
         "a,wormhole_length", "wormhole length a", cxxopts::value<float>()->default_value("0.1"))(
         "r,wormhole_throat_radius", "wormhole throat radius", cxxopts::value<float>()->default_value("2.0"))(
         "m,wormhole_mass_param", "wormhole mass parameter", cxxopts::value<float>()->default_value("0.2"))(
+        "l,lower_sphere_id", "texture id of lower sphere", cxxopts::value<float>()->default_value("0"))(
+        "u,upper_sphere_id", "texture id of upper sphere", cxxopts::value<float>()->default_value("2"))(
         "azimuth_velo", "azimuthal velocity of camera", cxxopts::value<float>()->default_value("0"))(
-        "radial_velo", "radial velocity of camera", cxxopts::value<float>()->default_value("0"))(
+        "radial_velo", "radial velocity of camera towards wormhole", cxxopts::value<float>()->default_value("0"))(
         "duration", "animation time [s]", cxxopts::value<float>()->default_value("5.0"))(
         "help", "Print usage");
     // clang-format on
@@ -116,12 +123,33 @@ int main(int argc, char** argv) {
         exit(0);
     }
 
-    const auto neg_dist_from_wh = -result["distance"].as<float>();
+    auto cam_pos = glm::vec3(0.f, 0.f, -result["distance"].as<float>());
+    auto cam_dir = glm::vec3(0.f, 0.f, 1.f);
 
-    auto wormhole_scene = SceneSetup(
-        result["width"].as<uint32_t>(), result["height"].as<uint32_t>(), glm::vec3(0.f, 0.f, neg_dist_from_wh),
-        glm::vec3(0.f, 0.f, 1.f), result["wormhole_length"].as<float>(), result["wormhole_throat_radius"].as<float>(),
-        result["wormhole_mass_param"].as<float>());
+    auto wormhole_scene =
+        SceneSetup(result["width"].as<uint32_t>(), result["height"].as<uint32_t>(), cam_pos, cam_dir,
+                   result["wormhole_length"].as<float>(), result["wormhole_throat_radius"].as<float>(),
+                   result["wormhole_mass_param"].as<float>(), result["lower_sphere_id"].as<int>(),
+                   result["upper_sphere_id"].as<int>());
+
+    const float sim_duration_s = result["duration"].as<float>();
+    const float sim_time_increment_s = sim_duration_s / kOutputFrameRate;
+    const float azimuth_velo = result["azimuth_velo"].as<float>();
+    const float radial_velo = result["radial_velo"].as<float>();
+
+    auto updateCamPos = [&]() {
+        auto cam_pos_sph = cartToSpherical(cam_pos);
+        cam_pos_sph.x += radial_velo * sim_time_increment_s;
+        cam_pos_sph.y += azimuth_velo * sim_time_increment_s;
+        const auto new_pos = sphericalToCart(cam_pos_sph);
+        wormhole_scene.update(new_pos, -normalize(new_pos));
+    };
+
+    // render loop for all camera positions
+    for (float sim_time_s = 0.f; sim_time_s < result["duration"].as<float>(); sim_time_s += sim_time_increment_s) {
+        wormhole_scene.render();
+        updateCamPos();
+    }
 
     return 0;
 }
