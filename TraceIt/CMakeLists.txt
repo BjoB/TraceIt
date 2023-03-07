@@ -120,3 +120,5 @@ target_link_libraries(traceit_cli
         traceit_lib
         cxxopts
 )
+
+target_compile_definitions(traceit_cli PRIVATE WITHOUT_VULKAN_IMG)
