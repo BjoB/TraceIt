@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "camera.h"
+#include "log.h"
 #include "renderer.h"
 #include "scene.h"
 
@@ -53,13 +54,13 @@ class SceneSetup {
         m_frame_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::high_resolution_clock::now() - start_time);
 
-        if (m_renderer.image()) {
-            const auto img_filename = std::string("wh_") + std::to_string(m_cur_img_index) + std::string(".png");
-            stbi_write_png(img_filename.c_str(), m_render_image_width, m_render_image_height, 3, m_renderer.imageData(),
-                           m_render_image_width * 3);
-            ++m_cur_img_index;
-        }
+        const auto img_filename = std::string("wh_") + std::to_string(m_cur_img_index) + std::string(".png");
+        stbi_write_png(img_filename.c_str(), m_render_image_width, m_render_image_height, 4, m_renderer.imageData(),
+                       m_render_image_width * 4);
+        ++m_cur_img_index;
     }
+
+    float curremtFrameTimeSecs() const { return static_cast<float>(m_frame_time_ms.count()) / 1e3; }
 
    private:
     void setWormholeCelestialSpheres(int lower_sphere_texture_idx, int upper_sphere_texture_idx) {
@@ -108,10 +109,10 @@ int main(int argc, char** argv) {
         "a,wormhole_length", "wormhole length a", cxxopts::value<float>()->default_value("0.1"))(
         "r,wormhole_throat_radius", "wormhole throat radius", cxxopts::value<float>()->default_value("2.0"))(
         "m,wormhole_mass_param", "wormhole mass parameter", cxxopts::value<float>()->default_value("0.2"))(
-        "l,lower_sphere_id", "texture id of lower sphere", cxxopts::value<float>()->default_value("0"))(
-        "u,upper_sphere_id", "texture id of upper sphere", cxxopts::value<float>()->default_value("2"))(
+        "l,lower_sphere_id", "texture id of lower sphere", cxxopts::value<int>()->default_value("0"))(
+        "u,upper_sphere_id", "texture id of upper sphere", cxxopts::value<int>()->default_value("2"))(
         "azimuth_velo", "azimuthal velocity of camera", cxxopts::value<float>()->default_value("0"))(
-        "radial_velo", "radial velocity of camera towards wormhole", cxxopts::value<float>()->default_value("0"))(
+        "radial_velo", "radial velocity of camera towards wormhole", cxxopts::value<float>()->default_value("0.0"))(
         "duration", "animation time [s]", cxxopts::value<float>()->default_value("5.0"))(
         "help", "Print usage");
     // clang-format on
@@ -132,8 +133,10 @@ int main(int argc, char** argv) {
                    result["wormhole_mass_param"].as<float>(), result["lower_sphere_id"].as<int>(),
                    result["upper_sphere_id"].as<int>());
 
+    wormhole_scene.update(cam_pos, cam_dir);  // initial cam setup
+
     const float sim_duration_s = result["duration"].as<float>();
-    const float sim_time_increment_s = sim_duration_s / kOutputFrameRate;
+    const float sim_time_increment_s = 1 / kOutputFrameRate;
     const float azimuth_velo = result["azimuth_velo"].as<float>();
     const float radial_velo = result["radial_velo"].as<float>();
 
@@ -141,14 +144,26 @@ int main(int argc, char** argv) {
         auto cam_pos_sph = cartToSpherical(cam_pos);
         cam_pos_sph.x += radial_velo * sim_time_increment_s;
         cam_pos_sph.y += azimuth_velo * sim_time_increment_s;
-        const auto new_pos = sphericalToCart(cam_pos_sph);
-        wormhole_scene.update(new_pos, -normalize(new_pos));
+        cam_pos = sphericalToCart(cam_pos_sph);
+        cam_dir = -normalize(cam_pos);
+        wormhole_scene.update(cam_pos, cam_dir);
     };
 
     // render loop for all camera positions
-    for (float sim_time_s = 0.f; sim_time_s < result["duration"].as<float>(); sim_time_s += sim_time_increment_s) {
+    bool first_run = true;
+    for (float sim_time_s = 0.f; sim_time_s < sim_duration_s; sim_time_s += sim_time_increment_s) {
+        TRACEIT_LOG_INFO("Rendering timestep: " << sim_time_s << " / " << sim_duration_s << " for pos: (" << cam_pos.x
+                                                << ", " << cam_pos.y << ", " << cam_pos.z << ")");
         wormhole_scene.render();
         updateCamPos();
+
+        if (first_run) {
+            first_run = false;
+            const auto num_images = static_cast<int>(sim_duration_s / sim_time_increment_s);
+            TRACEIT_LOG_INFO("Expected render time for all "
+                             << num_images << " images: " << num_images * wormhole_scene.curremtFrameTimeSecs()
+                             << " s");
+        }
     }
 
     return 0;
