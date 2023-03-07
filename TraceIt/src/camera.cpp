@@ -38,10 +38,11 @@ void Camera::updatePose(float time_delta_s) {
 }
 
 void Camera::updatePose(vec3 new_origin, vec3 new_direction) {
-    if (new_origin != m_origin || new_direction != m_direction) {
+    if (new_origin != m_origin || new_direction != m_direction || !m_pose_initialized) {
         m_origin = new_origin;
         m_direction = new_direction;
         updateViewMatrix();
+        m_pose_initialized = true;
     }
 }
 
