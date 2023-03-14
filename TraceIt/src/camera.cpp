@@ -1,4 +1,5 @@
 #include "camera.h"
+
 #include "input.h"
 
 using namespace glm;
@@ -19,7 +20,7 @@ void Camera::updatePose(float time_delta_s) {
     const float cam_speed = 5.f;
     bool cam_moved = false;
 
-    if (time_delta_s > 1.f) time_delta_s = 0.1f; // hacky way to reset after long running rendering
+    if (time_delta_s > 1.f) time_delta_s = 0.1f;  // hacky way to reset after long running rendering
 
     if (input::forwardPressed()) {
         m_origin += m_direction * cam_speed * time_delta_s;
@@ -46,13 +47,17 @@ void Camera::updatePose(vec3 new_origin, vec3 new_direction) {
     }
 }
 
+void Camera::refresh() {
+    updateProjectionMatrix();
+    updateRayDirections();
+}
+
 void Camera::refresh(uint32_t viewport_width, uint32_t viewport_height) {
     if (m_viewport_width != viewport_width || m_viewport_height != viewport_height) {
         m_viewport_width = viewport_width;
         m_viewport_height = viewport_height;
         m_aspect_ratio = static_cast<float>(viewport_width) / viewport_height;
-        updateProjectionMatrix();
-        updateRayDirections();
+        refresh();
     }
 }
 

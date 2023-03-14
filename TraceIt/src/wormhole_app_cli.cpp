@@ -17,7 +17,7 @@
 
 constexpr float kOutputFrameRate = 30.f;
 
-// z-dir: away from camera, y-dir: right-handed
+// z-dir towards wormhole, y-dir right-handed
 auto cartToSpherical(const glm::vec3& v) {
     auto r = sqrt(dot(v, v));
     return glm::vec3(r, acos(v.x / r), atan2(v.y, v.z));
@@ -44,7 +44,10 @@ class SceneSetup {
         setWormholeCelestialSpheres(lower_sphere_idx, upper_sphere_idx);
     }
 
-    void update(glm::vec3 cam_pos, glm::vec3 cam_dir) { m_camera.updatePose(cam_pos, cam_dir); }
+    void update(glm::vec3 cam_pos, glm::vec3 cam_dir) {
+        m_camera.updatePose(cam_pos, cam_dir);
+        m_camera.refresh();
+    }
 
     void render() {
         const auto start_time = std::chrono::high_resolution_clock::now();
@@ -147,7 +150,7 @@ int main(int argc, char** argv) {
         cam_pos_sph.x += radial_velo * sim_time_increment_s;
         cam_pos_sph.z += azimuth_velo * sim_time_increment_s;
         cam_pos = sphericalToCart(cam_pos_sph);
-        cam_dir = -normalize(cam_pos);
+        cam_dir = normalize(-cam_pos);
         wormhole_scene.update(cam_pos, cam_dir);
     };
 

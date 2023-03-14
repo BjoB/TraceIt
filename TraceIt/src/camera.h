@@ -15,6 +15,10 @@ class Camera {
 
     void updatePose(glm::vec3 new_origin, glm::vec3 new_direction);
 
+    // unconditional refresh
+    void refresh();
+
+    // refresh only if viewport width or high changes
     void refresh(uint32_t viewport_width, uint32_t viewport_height);
 
     glm::vec3 position() const { return m_origin; }
