@@ -32,6 +32,7 @@ void Renderer::refresh(uint32_t width, uint32_t height) {
 
 color Renderer::getPixelColor(const Scene& scene, uint32_t x, uint32_t y) {
     Ray ray(m_camera.position(), m_camera.rayDirection(x, y));
+    ray.origin_cam_dir = m_camera.direction();
     RayHitRecord rec;
     if (scene.hit(ray, 0.f, m_t_max, rec)) {
         return rec.color;
