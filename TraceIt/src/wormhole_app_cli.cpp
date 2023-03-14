@@ -126,6 +126,8 @@ int main(int argc, char** argv) {
 
     auto cam_pos = glm::vec3(0.f, 0.f, -result["distance"].as<float>());
     auto cam_dir = glm::vec3(0.f, 0.f, 1.f);
+    // auto cam_pos = glm::vec3(0.f, -5.f, 0.f);
+    // auto cam_dir = normalize(glm::vec3(0.f, 1.f, 0.f));
 
     auto wormhole_scene =
         SceneSetup(result["width"].as<uint32_t>(), result["height"].as<uint32_t>(), cam_pos, cam_dir,
@@ -143,7 +145,7 @@ int main(int argc, char** argv) {
     auto updateCamPos = [&]() {
         auto cam_pos_sph = cartToSpherical(cam_pos);
         cam_pos_sph.x += radial_velo * sim_time_increment_s;
-        cam_pos_sph.y += azimuth_velo * sim_time_increment_s;
+        cam_pos_sph.z += azimuth_velo * sim_time_increment_s;
         cam_pos = sphericalToCart(cam_pos_sph);
         cam_dir = -normalize(cam_pos);
         wormhole_scene.update(cam_pos, cam_dir);
