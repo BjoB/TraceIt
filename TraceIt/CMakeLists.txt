@@ -61,6 +61,11 @@ add_library(cxxopts INTERFACE)
 
 target_include_directories(cxxopts INTERFACE "${CMAKE_CURRENT_LIST_DIR}/3rdparty/cxxopts")
 
+# Boost
+
+find_package(Boost REQUIRED)
+include_directories(${Boost_INCLUDE_DIR})
+
 # Build TraceIt lib + apps -----------------------------------------------------------
 
 add_library(traceit_lib)
@@ -119,6 +124,7 @@ target_link_libraries(traceit_cli
     PRIVATE
         traceit_lib
         cxxopts
+        Boost::headers
 )
 
 target_compile_definitions(traceit_cli PRIVATE WITHOUT_VULKAN_IMG)
