@@ -44,10 +44,7 @@ class SceneSetup {
         setWormholeCelestialSpheres(lower_sphere_idx, upper_sphere_idx);
     }
 
-    void update(glm::vec3 cam_pos, glm::vec3 cam_dir) {
-        m_camera.updatePose(cam_pos, cam_dir);
-        m_camera.refresh();
-    }
+    void updateCamPose(glm::vec3 cam_pos, glm::vec3 cam_dir) { m_camera.updatePose(cam_pos, cam_dir); }
 
     void render() {
         const auto start_time = std::chrono::high_resolution_clock::now();
@@ -129,6 +126,8 @@ int main(int argc, char** argv) {
 
     auto cam_pos = glm::vec3(0.f, 0.f, -result["distance"].as<float>());
     auto cam_dir = glm::vec3(0.f, 0.f, 1.f);
+    // auto cam_pos = glm::vec3(0.f, -7.5f, -7.5f);
+    // auto cam_dir = normalize(glm::vec3(0.f, 1.f, 1.f));
     // auto cam_pos = glm::vec3(0.f, -5.f, 0.f);
     // auto cam_dir = normalize(glm::vec3(0.f, 1.f, 0.f));
 
@@ -138,20 +137,20 @@ int main(int argc, char** argv) {
                    result["wormhole_mass_param"].as<float>(), result["lower_sphere_id"].as<int>(),
                    result["upper_sphere_id"].as<int>());
 
-    wormhole_scene.update(cam_pos, cam_dir);  // initial cam setup
+    wormhole_scene.updateCamPose(cam_pos, cam_dir);  // initial cam setup
 
     const float sim_duration_s = result["duration"].as<float>();
     const float sim_time_increment_s = 1 / kOutputFrameRate;
     const float azimuth_velo = result["azimuth_velo"].as<float>();
     const float radial_velo = result["radial_velo"].as<float>();
 
-    auto updateCamPos = [&]() {
+    auto updateCamPose = [&]() {
         auto cam_pos_sph = cartToSpherical(cam_pos);
         cam_pos_sph.x += radial_velo * sim_time_increment_s;
         cam_pos_sph.z += azimuth_velo * sim_time_increment_s;
         cam_pos = sphericalToCart(cam_pos_sph);
         cam_dir = normalize(-cam_pos);
-        wormhole_scene.update(cam_pos, cam_dir);
+        wormhole_scene.updateCamPose(cam_pos, cam_dir);
     };
 
     // render loop for all camera positions
@@ -160,7 +159,7 @@ int main(int argc, char** argv) {
         TRACEIT_LOG_INFO("Rendering timestep: " << sim_time_s << " / " << sim_duration_s << " for pos: (" << cam_pos.x
                                                 << ", " << cam_pos.y << ", " << cam_pos.z << ")");
         wormhole_scene.render();
-        updateCamPos();
+        updateCamPose();
 
         if (first_run) {
             first_run = false;
