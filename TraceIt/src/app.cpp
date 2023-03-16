@@ -131,7 +131,7 @@ class SceneLayer : public Layer {
             return;
         }
         const auto start_time = m_auto_render ? m_last_stop_time : std::chrono::high_resolution_clock::now();
-        m_camera.refresh(m_render_image_width, m_render_image_height);
+        m_camera.refresh(m_render_image_width, m_render_image_height);  // -> on viewport change only?
         m_renderer.refresh(m_render_image_width, m_render_image_height);
         m_renderer.render(m_scene);
         m_last_stop_time = std::chrono::high_resolution_clock::now();

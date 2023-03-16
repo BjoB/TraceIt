@@ -47,17 +47,17 @@ void Camera::updatePose(vec3 new_origin, vec3 new_direction) {
     }
 }
 
-void Camera::refresh() {
+void Camera::refresh(uint32_t viewport_width, uint32_t viewport_height) {
+    m_viewport_width = viewport_width;
+    m_viewport_height = viewport_height;
+    m_aspect_ratio = static_cast<float>(viewport_width) / viewport_height;
     updateProjectionMatrix();
     updateRayDirections();
 }
 
-void Camera::refresh(uint32_t viewport_width, uint32_t viewport_height) {
+void Camera::refreshOnViewportChange(uint32_t viewport_width, uint32_t viewport_height) {
     if (m_viewport_width != viewport_width || m_viewport_height != viewport_height) {
-        m_viewport_width = viewport_width;
-        m_viewport_height = viewport_height;
-        m_aspect_ratio = static_cast<float>(viewport_width) / viewport_height;
-        refresh();
+        refresh(viewport_width, viewport_height);
     }
 }
 
