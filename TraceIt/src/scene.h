@@ -183,56 +183,69 @@ struct ExtendedEllisWormhole : Object {
             return vec3(v.x * cos(v.y), v.x * sin(v.y) * sin(v.z), v.x * sin(v.y) * cos(v.z));
         };
 
-        vec3 ray_march_pos = cartToSpherical(ray.orig);
+        // get rotations for cam position and direction relative to z-axis:
 
         const auto cam_dir = ray.origin_cam_dir;
-        const float angle_to_z_axis = atan2(cam_dir.y, cam_dir.z);
+        const float pos_angle_to_neg_z_axis = atan2(ray.orig.y, -ray.orig.z);
 
-        // rotated to z-axis (rtza):
-        const auto raydir_rtza_T_raydir = glm::eulerAngleX(angle_to_z_axis);
+        const float dir_angle_to_z_axis = atan2(cam_dir.y, cam_dir.z);
+
+        // transformation to rotate original position to z-axis system
+        const auto t1 = glm::translate(glm::eulerAngleX(-pos_angle_to_neg_z_axis), -ray.orig);
+        const auto raypos_rtza_T_rayorigin = glm::translate(t1, ray.orig);
+
+        // cam dir rotated to z-axis (rtza)
+        const auto raydir_rtza_T_raydir = glm::eulerAngleX(dir_angle_to_z_axis);
         const auto raydir_rtza = vec3(raydir_rtza_T_raydir * vec4(ray.dir, 1.0));
 
+        vec3 ray_march_pos = vec3(raypos_rtza_T_rayorigin * vec4(ray.orig, 1.f));
+        ray_march_pos = cartToSpherical(ray_march_pos);
+        // TRACEIT_LOG_INFO("start ray pos sph rtza = " << ray_march_pos.x << "," << ray_march_pos.y << ","
+        //                                              << ray_march_pos.z);
+
         if (compute_rays_in_eq_plane) {
-            const float angle_to_eq_plane = atan2(raydir_rtza.x, raydir_rtza.y);
-            const float rotation_dir = 1.f;  //  (raydir_rtza.x > 0.f) ? -1.f : 1.f;
+            float angle_to_eq_plane = atan2(abs(raydir_rtza.x), abs(raydir_rtza.y));
+            float rotation_dir = (raydir_rtza.x * raydir_rtza.y > 0.f) ? 1.f : -1.f;
+
+            // rotation to equatorial plane
             const auto raydir_rtza_eq_plane_T_raydir_rtza = glm::eulerAngleZ(rotation_dir * angle_to_eq_plane);
 
-            auto normalized_ray_dir = vec3(raydir_rtza_eq_plane_T_raydir_rtza * vec4(raydir_rtza, 1.0));
+            const auto normalized_ray_dir = vec3(raydir_rtza_eq_plane_T_raydir_rtza * vec4(raydir_rtza, 1.0));
+
+            // take rounded angle between ray direction in eq. plane and z-axis as key for lookup table
+            float angle_norm_ray_dir_to_z_axis = atan2(normalized_ray_dir.y, normalized_ray_dir.z);
+            angle_norm_ray_dir_to_z_axis = std::ceil(angle_norm_ray_dir_to_z_axis * 1000.0) / 1000.0;
 
             // direction of propagation in global spherical base coordinates,
             // assuming transformed origin at pos = (0,0,-z), with z > 0.
             auto ray_march_dir = vec3(-normalized_ray_dir.z, normalized_ray_dir.x, -normalized_ray_dir.y);
 
-            float eq_angular_velo = ray_march_dir.z;
-
-            auto it = eq_target_coord_lookup.find(eq_angular_velo);
+            const auto it = eq_target_coord_lookup.find(angle_norm_ray_dir_to_z_axis);
             if (it != eq_target_coord_lookup.end()) {
-                vec2 eq_target_coords = it->second;
-                float eq_l = eq_target_coords.x;
-                float eq_phi = eq_target_coords.y;
+                const vec2 eq_target_coords = it->second;
+                const float eq_l = eq_target_coords.x;
+                const float eq_phi = eq_target_coords.y;
                 // get ray_march_pos from eq. plane target point (eq_l, eq_phi)
                 ray_march_pos = vec3(eq_l, kPi / 2.f, eq_phi);
             } else {
                 float time = 0.f;
-                // TRACEIT_LOG_ERROR("ray_march_pos start = " << ray_march_pos.x << "," << ray_march_pos.y << ","
-                //                                            << ray_march_pos.z);
-                // TRACEIT_LOG_ERROR("ray_march_dir start = " << ray_march_dir.x << "," << ray_march_dir.y << ","
-                //                                            << ray_march_dir.z);
                 traceGeodesic(ray_march_pos, ray_march_dir, time);
 
-                eq_target_coord_lookup.insert(std::make_pair(eq_angular_velo, vec2(ray_march_pos.x, ray_march_pos.z)));
+                eq_target_coord_lookup.insert(
+                    std::make_pair(angle_norm_ray_dir_to_z_axis, vec2(ray_march_pos.x, ray_march_pos.z)));
             }
-
-            // TRACEIT_LOG_ERROR("ray_march_pos end = " << ray_march_pos.x << "," << ray_march_pos.y << ","
-            //                                         << ray_march_pos.z);
 
             // sign needs be preserved, as l will become r > 0 after coord. transformation
             const auto l = ray_march_pos.x;
             ray_march_pos.x = radiusFromTraveledDistance(l);
+            ray_march_pos = sphericalToCart(ray_march_pos);
+
             // rotate back from eq. plane
-            ray_march_pos = inverse(raydir_rtza_eq_plane_T_raydir_rtza) * vec4(sphericalToCart(ray_march_pos), 1.f);
-            // rotate back to original location
-            ray_march_pos = inverse(raydir_rtza_T_raydir) * vec4(ray_march_pos, 1.f);
+            ray_march_pos = vec3(inverse(raydir_rtza_eq_plane_T_raydir_rtza) * vec4(ray_march_pos, 1.f));
+
+            // rotate back around x-axis to original location
+            ray_march_pos = vec3(inverse(raypos_rtza_T_rayorigin) * vec4(ray_march_pos, 1.f));
+
             ray_march_pos = cartToSpherical(ray_march_pos);
             ray_march_pos.x = l;
         } else {
@@ -247,11 +260,15 @@ struct ExtendedEllisWormhole : Object {
             // sign needs be preserved, as l will become r > 0 after coord. transformation
             const auto l = ray_march_pos.x;
             ray_march_pos.x = radiusFromTraveledDistance(l);
-            // rotate back to original location
-            ray_march_pos = inverse(raydir_rtza_T_raydir) * vec4(sphericalToCart(ray_march_pos), 1.f);
+            ray_march_pos = sphericalToCart(ray_march_pos);
+
+            // rotate back around x-axis to original location
+            ray_march_pos = vec3(inverse(raypos_rtza_T_rayorigin) * vec4(ray_march_pos, 1.f));
             ray_march_pos = cartToSpherical(ray_march_pos);
             ray_march_pos.x = l;
         }
+        // TRACEIT_LOG_INFO("final sph pos orignal = (" << ray_march_pos.x << ", " << ray_march_pos.y << ", "
+        //                                              << ray_march_pos.z << ")");
         rec.color = spherePixelColor(ray_march_pos);
 
         return true;
@@ -295,13 +312,9 @@ struct ExtendedEllisWormhole : Object {
         const double dt = 0.1;
         for (double ts = 0.0; ts > -20.0; ts -= dt) {
             stepper.do_step(rayEquations, state_x, ts, dt);
-            // TRACEIT_LOG_INFO("pos = (" << state_x[0] << ", " << state_x[1] << ", " << state_x[2] << ")");
         }
 
         pos = vec3(state_x[0], state_x[1], state_x[2]);
-        // auto dxdt = inverse(metric(x)) * p;
-        // dir = normalize(vec3(dxdt.y, dxdt.z, dxdt.w));
-        // time = x.x;
     }
 
     vec4 canonicalMomenta(const vec4& x, const vec3& dir) const {
@@ -323,55 +336,6 @@ struct ExtendedEllisWormhole : Object {
         }
         return r;
     }
-
-    // vec4 initialMomenta(vec4 x, vec3 dir) const {
-    //     // With p^i = g_{ij}(x) * dx^i/dt and given dir = cartesian coord. distances for initial delta_t=1
-    //     // and v.y = vx = r * dtheta/dt => dtheta/dt = vx / r ... etc.:
-    //     const float r = x.y;
-    //     const float theta = x.z;
-    //     return metric(x) * vec4(1.f, dir.x, dir.y / r, dir.z / (r * sin(theta)));
-    // }
-
-    // void integrateOneStep(vec4& x, vec4& p) const {
-    //     // using euler integration
-    //     const float h = 0.1f;
-
-    //    p = p - h * hamiltonianGrad(x, p);   // dp_i/dt = -grad_i(H(x))
-    //    x = x + h * inverse(metric(x)) * p;  // dx^i/dt = g^{ij}(x) * p_j
-    //}
-
-    // vec4 hamiltonianGrad(vec4 x, vec4 p) const {
-    //     const float eps = 0.001f;
-    //     return (vec4(hamiltonian(x + vec4(eps, 0, 0, 0), p), hamiltonian(x + vec4(0, eps, 0, 0), p),
-    //                  hamiltonian(x + vec4(0, 0, eps, 0), p), hamiltonian(x + vec4(0, 0, 0, eps), p)) -
-    //             hamiltonian(x, p)) /
-    //            eps;
-    // }
-
-    // float hamiltonian(vec4 x, vec4 p) const {
-    //     mat44 g_inv = inverse(metric(x));
-    //     return 0.5f * glm::dot(g_inv * p, p);
-    // }
-
-    // mat44 metric(vec4 x) const {
-    //     // x = (t, l, theta, phi) = (x, y, z, w)
-    //     float _x_top = 2 * abs(x.y) - a;
-    //     float _x_bot = kPi * M;
-    //     float _x = _x_top / _x_bot;
-
-    //    float r = 0.f;
-    //    if (abs(x.y) > a) {
-    //        r = rho + M * (_x * atan2(_x_top, _x_bot) - 0.5f * log(1 + _x * _x));
-    //    } else {
-    //        r = rho;
-    //    }
-
-    //    auto g_phiphi = powf(r * sin(x.z), 2);
-
-    //    // if (r == 0.f) r += std::numeric_limits<float>::epsilon();                // make sure metric is invertible!
-    //    if (g_phiphi == 0.f) g_phiphi += std::numeric_limits<float>::epsilon();  // make sure metric is invertible!
-    //    return mat44(-1, 0, 0, 0, 0, 1, 0, 0, 0, 0, r * r, 0, 0, 0, 0, g_phiphi);
-    //}
 
     void loadImages() {
         if (image_data_lower_sphere) {
@@ -420,15 +384,13 @@ struct ExtendedEllisWormhole : Object {
         auto phi = spherical_pos.z;
 
         // Normalize angles to prevent out-of-bounds x,y pixel calc. below
-        // TODO: How to prevent this?
         auto normalize0TokPi = [](float angle, const float factor = 1.f) {
             angle = fmod(angle, factor * kPi);
             if (angle < 0.f) angle += factor * kPi;
             return angle;
         };
 
-        if (theta < 0.f) return pixel_color;
-        // theta *= -1.f;
+        if (theta < 0.f) return pixel_color;  // just in case
         theta = normalize0TokPi(theta);
         phi = normalize0TokPi(phi, 2.f);
         if (theta < 0.f || theta > kPi || phi < 0.f || phi > 2 * kPi || isnan(theta) || isnan(phi)) {
