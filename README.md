@@ -8,7 +8,7 @@ I started this project as a basic 3D raytracer with the usual "hello world" stuf
 
 # Wormhole Renderer
 
-Also part of this project is a standalone wormhole renderer in form of a CLI application. It allows you to easily create your own realistic image sequences and videos. It is based on the modified Ellis wormhole metric from the mentioned paper, which was also used by the DNEG special effects team in the movie "Interstellar". You can pass the following arguments, allowing you to set up your own scene, including image size, wormhole parameters, camera position and velocities. Several celestial background sphere textures can be choosen for the two connected space time regions.
+Also part of this project is a standalone wormhole renderer in form of a CLI application. It allows you to easily create your own realistic image sequences and videos. It is based on the modified Ellis wormhole metric from the mentioned paper, which was also used by the DNEG special effects team in the movie "Interstellar". You can pass the following arguments, allowing you to set up your own scene, including image size, wormhole parameters, camera position and velocities. Several celestial background sphere textures can be chosen to set the "background" of the two connected space time regions.
 
 As an example, the following call would create a 5s sequence of 640x480 images @30 fps, starting from a given distance and rotation around the wormhole.
 Two celestial sphere textures are taken from https://www.dneg.com/, which were provided for educational purposes. In general the id can be set to a value between 0..7 for the available textures.
