@@ -1,6 +1,6 @@
 # TraceIt - GR raytracer
 
-A raytracing sandbox, including an editor for scene setup and configuration, supporting simple objects like spheres, but also more advanced stuff like ray marching in curved spacetime, based on the laws of General Relativity.
+A raytracing sandbox, including an editor for scene setup and configuration, which supports 3D raytracing of simple objects like spheres and ray marching in curved spacetime, based on the laws of general relativity.
 
 I started this project as a basic 3D raytracer with the usual "hello world" stuff, but the ultimate goal was the accurate rendering of some metrics of general relativity (wormholes, black holes), continuing my work from a [previous project]( https://github.com/BjoB/gros). :slightly_smiling_face:
 
@@ -30,7 +30,7 @@ https://user-images.githubusercontent.com/29594555/225776423-2ecfcc52-237c-4860-
 
 # Dependencies
 
-As a prerequisite VulkanSDK-1.3.236.0 (or later) has to be installed.
+As a prerequisite VulkanSDK-1.3.236.0 (or later) has to be installed, which is used for the GUI application.
 Tested on Win 10, but should be adaptable to other systems. Developed with Visual Studio 2022.
 
 Libraries automatically bundled with this repo:
@@ -39,6 +39,11 @@ Libraries automatically bundled with this repo:
 - glm (OpenGL Mathematics, header-only)
 - glfw-3.3.8 (header + precompiled lib/dll)
 - stb (for image loading)
+
+# Todos
+
+- Add more things to the 3D setup (objects, materials ...)
+- Support for black hole metrics
 
 # References
 
