@@ -1,4 +1,4 @@
-# TraceIt - 3D + GR raytracer
+# TraceIt - GR raytracer
 
 A raytracing sandbox, including an editor for scene setup and configuration, supporting simple objects like spheres, but also more advanced stuff like ray marching in curved spacetime, based on the laws of General Relativity.
 
@@ -6,7 +6,7 @@ I started this project as a basic 3D raytracer with the usual "hello world" stuf
 
  It is inspired by a lot of fantastic open source content, starting from the well known "Raytracing in one weekend" series [[1]](#1) over to TheCherno's youtube channel on game engines and graphics programming [[2]](#2) to the papers by Kip S. Thorne et. al. on GR raytracing, which were published after the release of the movie "Interstellar" [[3]](#3), [[4]](#4).
 
-# Wormhole renderer
+# Wormhole Renderer
 
 Also part of this project is a standalone wormhole renderer in form of a CLI application. It allows you to easily create your own realistic image sequences and videos. It is based on the modified Ellis wormhole metric from the mentioned paper, which was also used by the DNEG special effects team in the movie "Interstellar". You can pass the following arguments, allowing you to set up your own scene, including image size, wormhole parameters, camera position and velocities. Several celestial background sphere textures can be choosen for the two connected space time regions.
 
