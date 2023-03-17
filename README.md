@@ -15,10 +15,10 @@ Two celestial sphere textures are taken from https://www.dneg.com/, which were p
 
 ```bash
 traceit_cli.exe 
--w 640 -h 480 
+-w 1080 -h 720 
 --distance 10.0 
 --radial_velo 0.0 
---azi_velo 0.4 
+--azimuth_velo 0.4 
 --duration 5.0 
 --lower_sphere_id 0  # "Saturn side"
 --upper_sphere_id 2  # "Far Galaxy side"
