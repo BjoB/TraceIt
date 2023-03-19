@@ -157,8 +157,8 @@ struct ExtendedEllisWormhole : Object {
     // Procedure used for faster rendering:
     // The final angular position of each ray only depends on the angular momentum in the eq. plane,
     // thus we can calculate it once and reuse it, IF the coordinate system is rotated accordingly.
-    // With the mapping abs(p_y) -> (l, phi_eq) and the stored rotation per ray, the final (l, theta, phi)
-    // can be restored.
+    // With the mapping angle_dir_yz -> (l, phi_eq) and the stored rotation per ray,
+    // the final position (l, theta, phi) can be restored.
     using TargetCoordLookup = std::map<float, vec2>;
 
     enum CelestialSphereType { Saturn = 0, Galaxy1, Galaxy2, Eve1, Eve2, Eve3, Eve4, Eve5 };
@@ -183,11 +183,16 @@ struct ExtendedEllisWormhole : Object {
             return vec3(v.x * cos(v.y), v.x * sin(v.y) * sin(v.z), v.x * sin(v.y) * cos(v.z));
         };
 
+        // calculate ray direction unit vector N in camera's local sky
+        // const auto ray_dir_spherical = cartToSpherical(ray.dir);
+        // const float theta_cs = ray_dir_spherical.y;
+        // const float phi_cs = ray_dir_spherical.z;
+        // const auto N = vec3(cos(theta_cs), sin(theta_cs) * sin(phi_cs), sin(theta_cs) * cos(phi_cs));
+
         // get rotations for cam position and direction relative to z-axis:
 
         const auto cam_dir = ray.origin_cam_dir;
         const float pos_angle_to_neg_z_axis = atan2(ray.orig.y, -ray.orig.z);
-
         const float dir_angle_to_z_axis = atan2(cam_dir.y, cam_dir.z);
 
         // transformation to rotate original position to z-axis system
@@ -200,8 +205,7 @@ struct ExtendedEllisWormhole : Object {
 
         vec3 ray_march_pos = vec3(raypos_rtza_T_rayorigin * vec4(ray.orig, 1.f));
         ray_march_pos = cartToSpherical(ray_march_pos);
-        // TRACEIT_LOG_INFO("start ray pos sph rtza = " << ray_march_pos.x << "," << ray_march_pos.y << ","
-        //                                              << ray_march_pos.z);
+        ray_march_pos.x = l_cam_origin;
 
         if (compute_rays_in_eq_plane) {
             float angle_to_eq_plane = atan2(abs(raydir_rtza.x), abs(raydir_rtza.y));
@@ -218,6 +222,7 @@ struct ExtendedEllisWormhole : Object {
 
             // direction of propagation in global spherical base coordinates,
             // assuming transformed origin at pos = (0,0,-z), with z > 0.
+            // auto ray_march_dir = vec3(-N.z, N.x, -N.y);
             auto ray_march_dir = vec3(-normalized_ray_dir.z, normalized_ray_dir.x, -normalized_ray_dir.y);
 
             const auto it = eq_target_coord_lookup.find(angle_norm_ray_dir_to_z_axis);
@@ -229,6 +234,13 @@ struct ExtendedEllisWormhole : Object {
                 ray_march_pos = vec3(eq_l, kPi / 2.f, eq_phi);
             } else {
                 float time = 0.f;
+
+                // TODO: Make this an option
+                // This flips the camera direction to point to the wormhole after the transition to the upper sphere
+                if (l_cam_origin > a) {
+                    ray_march_dir.x *= -1.f;
+                }
+
                 traceGeodesic(ray_march_pos, ray_march_dir, time);
 
                 eq_target_coord_lookup.insert(
@@ -309,8 +321,8 @@ struct ExtendedEllisWormhole : Object {
 
         boost::numeric::odeint::runge_kutta4<StateType> stepper;
         StateType state_x{x.y, x.z, x.w, p.y, p.z};
-        const double dt = 0.1;
-        for (double ts = 0.0; ts > -20.0; ts -= dt) {
+        const double dt = -0.1;
+        for (double ts = 0.0; ts > -20.0; ts += dt) {
             stepper.do_step(rayEquations, state_x, ts, dt);
         }
 
@@ -335,6 +347,14 @@ struct ExtendedEllisWormhole : Object {
             r = rho;
         }
         return r;
+    }
+
+    void initTraveledDistance(float l) { l_cam_origin = l; }
+
+    void updateTraveledDistance(float dr) {
+        const float r = radiusFromTraveledDistance(l_cam_origin);
+        l_cam_origin += dr * 1 / sqrt(1 - 2 * M / r);
+        TRACEIT_LOG_INFO("l = " << l_cam_origin);
     }
 
     void loadImages() {
@@ -409,7 +429,7 @@ struct ExtendedEllisWormhole : Object {
         };
 
         // phi range = [0,2*pi], theta range = [0, pi]
-        if (l > 0.f && image_data_lower_sphere) {
+        if (l < 0.f && image_data_lower_sphere) {
             auto x = static_cast<int>(image_lower_sphere_width * phi / (2 * kPi));
             auto y = static_cast<int>(image_lower_sphere_height * theta / kPi);
             unsigned char* pixel_offset =
@@ -429,6 +449,8 @@ struct ExtendedEllisWormhole : Object {
     float a = 0.1f;   // half wormhole length
     float rho = 2.f;  // wormhole throat radius
     float M = 0.2f;   // mass, representing the gentleness of the interior-to-exterior transition of the wormhole
+
+    float l_cam_origin;  // to determine in which celestial sphere we are for ellis wormhole metric
 
     // Only possible if camera points towards wormhole center!
     // Rotates ray before start of integration to eq. plane and reverts that before pixel color retrieval
