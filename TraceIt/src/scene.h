@@ -237,9 +237,9 @@ struct ExtendedEllisWormhole : Object {
 
                 // TODO: Make this an option
                 // This flips the camera direction to point to the wormhole after the transition to the upper sphere
-                if (l_cam_origin > a) {
-                    ray_march_dir.x *= -1.f;
-                }
+                // if (l_cam_origin > a) {
+                //    ray_march_dir.x *= -1.f;
+                //}
 
                 traceGeodesic(ray_march_pos, ray_march_dir, time);
 
