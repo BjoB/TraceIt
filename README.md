@@ -36,6 +36,10 @@ Example output video, which can be generated from the image sequence with tools 
 
 https://user-images.githubusercontent.com/29594555/225776423-2ecfcc52-237c-4860-81b5-d9cac418349d.mp4
 
+Trip through the wormhole with a radial velocity > 0:
+
+https://github.com/BjoB/TraceIt/assets/29594555/121dedb5-aa81-4b3c-8f35-beb6aaf9ec42
+
 # Dependencies
 
 As a prerequisite VulkanSDK-1.3.236.0 (or later) has to be installed, which is used for the GUI application.
